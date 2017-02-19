@@ -1,0 +1,5 @@
+*.o
+*Cargo.lock
+*.bk
+*target
+*main.html
