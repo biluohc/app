@@ -1,6 +1,8 @@
 #![allow(stable_features)]
-#![feature(repeat_str)]
-#![allow(dead_code)]
+#![feature(repeat_str)]  //stable since 1.16.0
+#![allow(unknown_lints)]
+#![allow(explicit_iter_loop)] 
+
 use std::collections::{HashSet, HashMap};
 use std::process::exit;
 use std::env;
@@ -8,14 +10,15 @@ use std::env;
 #[macro_use]
 extern crate stderr;
 use stderr::Loger;
-// tini
 
+#[test]
 fn main() {
-    init!();
     app_test();
 }
 
+#[allow(dead_code)]
 fn app_test() {
+    init!();    
     let app = App::new("fht2p")
         .version("0.5.2")
         .author("Wspsxing", "biluohc@qq.com>")
@@ -36,7 +39,7 @@ fn app_test() {
         .args_name("PATHS")
         .args_help("Sets the paths to share")
         .get();
-    println!("\nApp_Debug:\n{:?}\n", app);
+    errln!("\nApp_Debug:\n{:?}\n", app);
 }
 
 #[derive(Debug)]
@@ -57,7 +60,7 @@ pub struct App<'app> {
     pub opts: HashMap<String, Opt<'app>>, // options
     pub flags: HashMap<String, Flag<'app>>, // flags
     pub args_name: Option<&'app str>, // 其余参数名字，None表示不收集，默认不收集。
-    pub args: HashMap<usize, String>, // 其余参数及其编号。
+    pub args: Vec<String>, // 其余参数及其编号。
     pub args_default: Option<&'app str>,
     pub args_must: bool, // 是否必须。
     pub args_help: Option<&'app str>,
@@ -91,11 +94,11 @@ impl<'app> Flag<'app> {
         self.long = Some(long);
         self
     }
-    pub fn default<'s: 'app>(mut self, default: bool) -> Self {
+    pub fn default(mut self, default: bool) -> Self {
         self.value = Some(default);
         self
     }
-    pub fn must<'s: 'app>(mut self, must: bool) -> Self {
+    pub fn must(mut self, must: bool) -> Self {
         self.must = must;
         self
     }
@@ -103,8 +106,8 @@ impl<'app> Flag<'app> {
         self.help = Some(help);
         self
     }
-    pub fn value<'s: 'app>(&self) -> Option<bool> {
-        self.value.clone()
+    pub fn value(&self) -> Option<bool> {
+        self.value
     }
 }
 #[derive(Debug,Clone)]
@@ -143,7 +146,7 @@ impl<'app> Opt<'app> {
         self.default = Some(default);
         self
     }
-    pub fn valid_values<'s: 'app, T: Iterator>(mut self, values: T) -> Self
+    pub fn valid_values<T: Iterator>(mut self, values: T) -> Self
         where <T as std::iter::Iterator>::Item: std::fmt::Display
     {
         for value_valid in values {
@@ -151,7 +154,7 @@ impl<'app> Opt<'app> {
         }
         self
     }
-    pub fn must<'s: 'app>(mut self, must: bool) -> Self {
+    pub fn must(mut self, must: bool) -> Self {
         self.must = must;
         self
     }
@@ -159,7 +162,7 @@ impl<'app> Opt<'app> {
         self.help = Some(help);
         self
     }
-    pub fn value<'s: 'app>(&self) -> Option<String> {
+    pub fn value(&self) -> Option<String> {
         self.value.clone()
     }
 }
@@ -187,7 +190,7 @@ impl<'app> App<'app> {
             opts: HashMap::new(),
             flags: HashMap::new(),
             args_name: None,
-            args: HashMap::new(),
+            args: Vec::new(),
             args_default: None,
             args_must: false,
             args_help: None,
@@ -225,7 +228,7 @@ impl<'app> App<'app> {
         self.args_default = Some(default);
         self
     }
-    pub fn args_must<'s: 'app>(mut self, must: bool) -> Self {
+    pub fn args_must(mut self, must: bool) -> Self {
         self.args_must = must;
         self
     }
@@ -236,29 +239,31 @@ impl<'app> App<'app> {
     pub fn opt(mut self, b: Opt<'app>) -> Self {
         if b.short == None && b.long == None {
             err!("short and long can't be empty all: {:?}", b);
-            std::process::exit(1);
+           exit(1);
         }
         if let Some(s) = self.opts.insert(b.opt_name.to_owned(), b) {
             err!("option's name is repeated: {:?}", s);
-            std::process::exit(1);
+           exit(1);
         }
         self
     }
     pub fn flag(mut self, b: Flag<'app>) -> Self {
         if b.short == None && b.long == None {
             err!("short and long can't be empty all: {:?}", b);
-            std::process::exit(1);
+           exit(1);
         }
         if let Some(s) = self.flags.insert(b.flag_name.to_owned(), b) {
             err!("flag's name is repeated: {:?}", s);
-            std::process::exit(1);
+           exit(1);
         };
         self
     }
     pub fn flags(&'app self) -> &'app HashMap<String, Flag<'app>> {
         &self.flags
     }
+    #[allow(cyclomatic_complexity)]
     pub fn get(mut self) -> Self {
+        dbln!("{}::App::get()", module_path!());
         let mut args: Vec<String> = Vec::new();
         for (i, arg) in env::args().enumerate() {
             if i == 0 {
@@ -306,20 +311,6 @@ impl<'app> App<'app> {
                 }
             }
         }
-        // option的值是否合法。
-        fn value_valid(value: &str, opt: Option<&Opt>) -> bool {
-            if let Some(opt) = opt {
-                if opt.valid_values.is_empty() {
-                    return true;
-                }
-                for valid_value in &opt.valid_values {
-                    if &value == valid_value {
-                        return true;
-                    }
-                }
-            }
-            false
-        }
         let mut i = 0;
         for _ in 0..args.len() {
             if i >= args.len() {
@@ -363,7 +354,7 @@ impl<'app> App<'app> {
                     }
                     _ => unreachable!(),
                 };
-            } else if arg.starts_with("-") && arg.len() > 1 {
+            } else if arg.starts_with('-') && arg.len() > 1 {
                 let opt_name = match short_to_name.get(&arg[1..]) {
                     Some(s) => s,
                     None => {
@@ -401,8 +392,7 @@ impl<'app> App<'app> {
                     _ => unreachable!(),
                 };
             } else {
-                let args_len = self.args.len();
-                self.args.insert(args_len, arg.to_string());
+                self.args.push(arg.to_string());
                 i += 1;
             }
         }
@@ -429,7 +419,7 @@ impl<'app> App<'app> {
             }
         }
         if self.args.is_empty() && self.args_default.is_some() {
-            self.args.insert(0, self.args_default.unwrap().to_string());
+            self.args.push(self.args_default.unwrap().to_string());
         }
         if self.args.is_empty() && self.args_must {
             err!("args: '{}' is must", self.args_name.unwrap());
@@ -491,7 +481,7 @@ impl<'app> App<'app> {
         }
         let blanks = |msg: &String, len| {
             let blank_num = len - msg.len();
-            String::new() + &msg + &" ".repeat(blank_num)
+            String::new() + msg + &" ".repeat(blank_num)
         };
         for strs in vec_flag.iter() {
             if strs.len() > 1 {
@@ -553,30 +543,23 @@ impl<'app> App<'app> {
     pub fn get_opt(&self, key: &str) -> Option<String> {
         if let Some(s) = self.opts.get(key) {
             if let Some(s) = s.value.as_ref() {
-                Some(s.clone())
-            } else {
-                None
+                return Some(s.clone());
             }
-        } else {
-            None
         }
+        None
     }
     pub fn get_flag(&self, key: &str) -> Option<bool> {
         if let Some(s) = self.flags.get(key) {
             if let Some(s) = s.value.as_ref() {
-                Some(s.clone())
-            } else {
-                None
+                return Some(*s);
             }
-        } else {
-            None
         }
+        None
     }
-    pub fn get_args(&self) -> Option<HashMap<usize, String>> {
+    pub fn get_args(&self) -> Option<Vec<String>> {
         if self.args_name.is_some() {
-            Some(self.args.clone())
-        } else {
-            None
+          return   Some(self.args.clone())
         }
+        None
     }
 }
