@@ -1,7 +1,7 @@
 #![allow(stable_features)]
-#![feature(repeat_str)]  //stable since 1.16.0
+//stable since 1.16.0
 #![allow(unknown_lints)]
-#![allow(explicit_iter_loop)] 
+#![allow(explicit_iter_loop)]
 
 use std::collections::{HashSet, HashMap};
 use std::process::exit;
@@ -18,7 +18,7 @@ fn main() {
 
 #[allow(dead_code)]
 fn app_test() {
-    init!();    
+    init!();
     let app = App::new("fht2p")
         .version("0.5.2")
         .author("Wspsxing", "biluohc@qq.com>")
@@ -239,22 +239,25 @@ impl<'app> App<'app> {
     pub fn opt(mut self, b: Opt<'app>) -> Self {
         if b.short == None && b.long == None {
             err!("short and long can't be empty all: {:?}", b);
-           exit(1);
+            exit(1);
         }
         if let Some(s) = self.opts.insert(b.opt_name.to_owned(), b) {
             err!("option's name is repeated: {:?}", s);
-           exit(1);
+            exit(1);
         }
         self
+    }
+    pub fn opts(&'app self) -> &'app HashMap<String, Opt<'app>> {
+        &self.opts
     }
     pub fn flag(mut self, b: Flag<'app>) -> Self {
         if b.short == None && b.long == None {
             err!("short and long can't be empty all: {:?}", b);
-           exit(1);
+            exit(1);
         }
         if let Some(s) = self.flags.insert(b.flag_name.to_owned(), b) {
             err!("flag's name is repeated: {:?}", s);
-           exit(1);
+            exit(1);
         };
         self
     }
@@ -542,23 +545,19 @@ impl<'app> App<'app> {
 
     pub fn get_opt(&self, key: &str) -> Option<String> {
         if let Some(s) = self.opts.get(key) {
-            if let Some(s) = s.value.as_ref() {
-                return Some(s.clone());
-            }
+            return s.value.clone();
         }
         None
     }
     pub fn get_flag(&self, key: &str) -> Option<bool> {
         if let Some(s) = self.flags.get(key) {
-            if let Some(s) = s.value.as_ref() {
-                return Some(*s);
-            }
+            return s.value;
         }
         None
     }
     pub fn get_args(&self) -> Option<Vec<String>> {
         if self.args_name.is_some() {
-          return   Some(self.args.clone())
+            return Some(self.args.clone());
         }
         None
     }

@@ -1,3 +1,3 @@
 # App-rs
 
-## simple command-line-parser.
+## A simple command-line-parser.
