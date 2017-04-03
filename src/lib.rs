@@ -1,564 +1,697 @@
-#![allow(stable_features)]
-//stable since 1.16.0
-#![allow(unknown_lints)]
-#![allow(explicit_iter_loop)]
 
-use std::collections::{HashSet, HashMap};
-use std::process::exit;
-use std::env;
+//! # [app](https://github.com/biluohc/app-rs)
+//!  A easy-to-use command-line-parser.
+//!
+
+//! ## Usage
+//!
+//! On Cargo.toml:
+//!
+//! ```toml
+//!  [dependencies]
+//!  app = "^0.2.0"
+//! ```
+//! or
+//!
+//! ```toml
+//!  [dependencies]
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.2.0" }
+//! ```
+//!
+//! ## Examples
+//! * [fht2p](https://github.com/biluohc/app-rs/blob/master/tests/main.rs)
+//! * [zipcs](https://github.com/biluohc/zipcs)
 
 #[macro_use]
 extern crate stderr;
 use stderr::Loger;
 
-#[test]
-fn main() {
-    app_test();
-}
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::collections::BTreeMap as Map;
+use std::process::exit;
+use std::fmt::Debug;
+use std::env;
 
-#[allow(dead_code)]
-fn app_test() {
-    init!();
-    let app = App::new("fht2p")
-        .version("0.5.2")
-        .author("Wspsxing", "biluohc@qq.com>")
-        .address("Repository", "https://github.com/biluohc/fht2p")
-        .about("A HTTP Server for Static File written with Rust")
-        .opt(Opt::new("config").short("cf").long("config").help("Sets a custom config file"))
-        .flag(Flag::new("cp")
-            .short("cp")
-            .long("cp")
-            .help("Print the default config file"))
-        .opt(Opt::new("ip").short("i").long("ip").help("Sets listenning ip"))
-        .opt(Opt::new("port").short("p").long("port").help("Sets listenning port"))
-        .opt(Opt::new("keep_alive")
-            .short("ka")
-            .long("keep-alive")
-            .valid_values(vec!["0", "false", "1", "true"].into_iter())
-            .help("Whether use keep-alive"))
-        .args_name("PATHS")
-        .args_help("Sets the paths to share")
-        .get();
-    errln!("\nApp_Debug:\n{:?}\n", app);
-}
+static mut HELP: bool = false;
+static mut HELP_SUBCMD: bool = false;
+static mut VERSION: bool = false;
 
-#[derive(Debug)]
-#[derive(Clone)]
+/// application struct
+#[derive(Debug,Default)]
 pub struct App<'app> {
-    // 环境信息
-    pub current_exe: Result<String, String>, // 可执行文件路径
-    pub current_dir: Result<String, String>, // 当前目录
-    pub home_dir: Option<String>, // home目录
-    pub args_len: usize, // 参数总长度
-    // App信息
-    pub name: &'app str,
-    pub version: Option<&'app str>,
-    pub author: Vec<(&'app str, &'app str)>, /* 名字-邮箱>,可以is_empty,每次调用添加一个作者+邮箱。 */
-    pub address: Vec<(&'app str, &'app str)>, /* 项目地址/主页，每次调用添加名字链接。Vec顺序可控。 */
-    pub about: Option<&'app str>, // 简介
-    // 参数信息。
-    pub opts: HashMap<String, Opt<'app>>, // options
-    pub flags: HashMap<String, Flag<'app>>, // flags
-    pub args_name: Option<&'app str>, // 其余参数名字，None表示不收集，默认不收集。
-    pub args: Vec<String>, // 其余参数及其编号。
-    pub args_default: Option<&'app str>,
-    pub args_must: bool, // 是否必须。
-    pub args_help: Option<&'app str>,
-}
-
-#[derive(Debug,Clone)]
-pub struct Flag<'app> {
-    flag_name: &'app str,
-    short: Option<&'app str>, // -h
-    long: Option<&'app str>, // --help
-    value: Option<bool>, // 是否出现,default方法直接改值。
-    must: bool, // default is false
-    help: Option<&'app str>,
-}
-impl<'app> Flag<'app> {
-    pub fn new<'s: 'app>(flag_name: &'s str) -> Flag<'app> {
-        Flag {
-            flag_name: flag_name,
-            short: None,
-            long: None,
-            value: None,
-            must: false,
-            help: None,
-        }
-    }
-    pub fn short<'s: 'app>(mut self, short: &'s str) -> Self {
-        self.short = Some(short);
-        self
-    }
-    pub fn long<'s: 'app>(mut self, long: &'s str) -> Self {
-        self.long = Some(long);
-        self
-    }
-    pub fn default(mut self, default: bool) -> Self {
-        self.value = Some(default);
-        self
-    }
-    pub fn must(mut self, must: bool) -> Self {
-        self.must = must;
-        self
-    }
-    pub fn help<'s: 'app>(mut self, help: &'s str) -> Self {
-        self.help = Some(help);
-        self
-    }
-    pub fn value(&self) -> Option<bool> {
-        self.value
-    }
-}
-#[derive(Debug,Clone)]
-pub struct Opt<'app> {
-    opt_name: &'app str, // key
-    short: Option<&'app str>, // -n
-    long: Option<&'app str>, // --name
-    value: Option<String>, // 是否有值（出现）,如果有的话，是否合法。
-    valid_values: HashSet<String>, // 合法值集合。
-    default: Option<&'app str>, // default value
-    must: bool, // default is false
-    help: Option<&'app str>,
-}
-impl<'app> Opt<'app> {
-    pub fn new<'s: 'app>(opt_name: &'s str) -> Opt<'app> {
-        Opt {
-            opt_name: opt_name,
-            short: None,
-            long: None,
-            value: None,
-            valid_values: HashSet::new(),
-            default: None,
-            must: false,
-            help: None,
-        }
-    }
-    pub fn short<'s: 'app>(mut self, short: &'s str) -> Self {
-        self.short = Some(short);
-        self
-    }
-    pub fn long<'s: 'app>(mut self, long: &'s str) -> Self {
-        self.long = Some(long);
-        self
-    }
-    pub fn default<'s: 'app>(mut self, default: &'s str) -> Self {
-        self.default = Some(default);
-        self
-    }
-    pub fn valid_values<T: Iterator>(mut self, values: T) -> Self
-        where <T as std::iter::Iterator>::Item: std::fmt::Display
-    {
-        for value_valid in values {
-            self.valid_values.insert(format!("{}", value_valid));
-        }
-        self
-    }
-    pub fn must(mut self, must: bool) -> Self {
-        self.must = must;
-        self
-    }
-    pub fn help<'s: 'app>(mut self, help: &'s str) -> Self {
-        self.help = Some(help);
-        self
-    }
-    pub fn value(&self) -> Option<String> {
-        self.value.clone()
-    }
+    name: &'app str,
+    version: &'app str,
+    authors: Vec<(&'app str, &'app str)>, // (name,email)
+    addrs: Vec<(&'app str, &'app str)>, // (addr_name,addr)
+    // env_vars
+    current_exe: Option<String>,
+    current_dir: Option<String>,
+    home_dir: Option<String>,
+    temp_dir: String,
+    //commands
+    main: Cmd<'app>,
+    current_cmd: Option<&'app mut String>, //main is None
+    sub_cmds: Map<String, Cmd<'app>>, // name,_
 }
 
 impl<'app> App<'app> {
-    pub fn new<'s: 'app>(name: &'s str) -> App<'app> {
-        use std::path::PathBuf;
-        use std::error::Error;
-        let res = |p: std::io::Result<PathBuf>| match p {
-            Err(e) => Err(e.description().to_owned()),
-            Ok(ok) => Ok(ok.to_string_lossy().into_owned()),
+    pub fn new<'s: 'app>(name: &'s str) -> Self {
+        init!();
+        let mut app = Self::default();
+        app.name = name;
+        app = unsafe {
+            app.opt(Opt::new("help", &mut HELP)
+                        .short("h")
+                        .long("help")
+                        .help("show the help message"))
         };
-        let app = App {
-            current_exe: res(env::current_exe()),
-            current_dir: res(env::current_dir()),
-            home_dir: env::home_dir().map(|x| x.to_string_lossy().into_owned()),
-            args_len: env::args().len(),
-
-            name: name,
-            version: None,
-            author: Vec::new(),
-            address: Vec::new(),
-            about: None,
-
-            opts: HashMap::new(),
-            flags: HashMap::new(),
-            args_name: None,
-            args: Vec::new(),
-            args_default: None,
-            args_must: false,
-            args_help: None,
+        app = unsafe {
+            app.opt(Opt::new("version", &mut VERSION)
+                        .short("v")
+                        .long("version")
+                        .help("show the version message"))
         };
-        let app = app.flag(Flag::new("help")
-            .short("h")
-            .long("help")
-            .help("Print this help message"));
-        app.flag(Flag::new("version")
-            .short("V")
-            .long("version")
-            .help("Print the version"))
+        app
     }
     pub fn version<'s: 'app>(mut self, version: &'s str) -> Self {
-        self.version = Some(version);
+        self.version = version;
+        self
+    }
+    pub fn desc<'s: 'app>(mut self, desc: &'s str) -> Self {
+        self.main.desc = desc;
         self
     }
     pub fn author<'s: 'app>(mut self, name: &'s str, email: &'s str) -> Self {
-        self.author.push((name, email));
+        self.authors.push((name, email));
         self
     }
-    pub fn address<'s: 'app>(mut self, address_name: &'s str, address: &'s str) -> Self {
-        self.address.push((address_name, address));
+    pub fn addr<'s: 'app>(mut self, name: &'s str, url: &'s str) -> Self {
+        self.addrs.push((name, url));
         self
     }
-    pub fn about<'s: 'app>(mut self, about: &'s str) -> Self {
-        self.about = Some(about);
+    pub fn opt(mut self, opt: Opt<'app>) -> Self {
+        self.main = self.main.opt(opt);
         self
     }
-    pub fn args_name<'s: 'app>(mut self, args_name: &'s str) -> Self {
-        self.args_name = Some(args_name);
+    pub fn args<'s: 'app, S>(mut self, name: S, value: &'s mut Vec<String>) -> Self
+        where S: Into<String>
+    {
+        self.main.args = Some(value);
+        self.main.args_name = name.into();
         self
     }
-    pub fn args_default<'s: 'app>(mut self, default: &'s str) -> Self {
-        self.args_default = Some(default);
-        self
-    }
-    pub fn args_must(mut self, must: bool) -> Self {
-        self.args_must = must;
-        self
-    }
-    pub fn args_help<'s: 'app>(mut self, help: &'s str) -> Self {
-        self.args_help = Some(help);
-        self
-    }
-    pub fn opt(mut self, b: Opt<'app>) -> Self {
-        if b.short == None && b.long == None {
-            err!("short and long can't be empty all: {:?}", b);
-            exit(1);
-        }
-        if let Some(s) = self.opts.insert(b.opt_name.to_owned(), b) {
-            err!("option's name is repeated: {:?}", s);
-            exit(1);
-        }
-        self
-    }
-    pub fn opts(&'app self) -> &'app HashMap<String, Opt<'app>> {
-        &self.opts
-    }
-    pub fn flag(mut self, b: Flag<'app>) -> Self {
-        if b.short == None && b.long == None {
-            err!("short and long can't be empty all: {:?}", b);
-            exit(1);
-        }
-        if let Some(s) = self.flags.insert(b.flag_name.to_owned(), b) {
-            err!("flag's name is repeated: {:?}", s);
-            exit(1);
+    pub fn cmd(mut self, mut cmd: Cmd<'app>) -> Self {
+        let name = cmd.name.to_string();
+        cmd = unsafe {
+            cmd.opt(Opt::new("help", &mut HELP_SUBCMD)
+                        .short("h")
+                        .long("help")
+                        .help("show the help message"))
         };
+        if self.sub_cmds.insert(name.clone(), cmd).is_some() {
+            panic!("sub_command: \"{}\" already defined", name);
+        }
         self
     }
-    pub fn flags(&'app self) -> &'app HashMap<String, Flag<'app>> {
-        &self.flags
+    pub fn current_cmd<'s: 'app>(mut self, value: &'s mut String) -> Self {
+        self.current_cmd = Some(value);
+        self
     }
-    #[allow(cyclomatic_complexity)]
-    pub fn get(mut self) -> Self {
-        dbln!("{}::App::get()", module_path!());
-        let mut args: Vec<String> = Vec::new();
-        for (i, arg) in env::args().enumerate() {
-            if i == 0 {
-                // 消耗第一个。
-                continue;
-            }
-            if arg == "-h" || arg == "--help" {
+}
+impl<'app> App<'app> {
+    /// `parse_string(std::env::args()[1..])` and `exit(1)` if parse fails.
+    pub fn parse(&mut self) {
+        let mut args = env::args();
+        args.next();
+        let args: Vec<String> = args.collect();
+        if let Err(e) = self.parse_strings(args) {
+            errln!("ERROR:\n  {}\n", e);
+            if let Some(ref s) = self.current_cmd {
+                self.help_cmd(s);
+            } else {
                 self.help();
-                unreachable!();
             }
-            if arg == "-V" || arg == "--version" {
-                self.ver();
-                unreachable!();
-            }
-            args.push(arg);
+            exit(1);
         }
-        // 收集选项到名字的映射。
-        let mut short_to_name: HashMap<&'app str, String> = HashMap::new();
-        let mut long_to_name: HashMap<&'app str, String> = HashMap::new();
-        for (k, v) in self.flags.iter() {
-            if let Some(s) = v.short {
-                if let Some(s) = short_to_name.insert(s, k.clone()) {
-                    errln!("The flag is repeated： {:?}", s);
-                    exit(1);
-                }
-            }
-            if let Some(s) = v.long {
-                if let Some(s) = long_to_name.insert(s, k.clone()) {
-                    errln!("The flag is repeated： {:?}", s);
-                    exit(1);
-                }
-            }
-        }
-        for (k, v) in self.opts.iter() {
-            if let Some(s) = v.short {
-                if let Some(s) = short_to_name.insert(s, k.clone()) {
-                    errln!("The flag is repeated： {:?}", s);
-                    exit(1);
-                }
-            }
-            if let Some(s) = v.long {
-                if let Some(s) = long_to_name.insert(s, k.clone()) {
-                    errln!("The flag is repeated： {:?}", s);
-                    exit(1);
+    }
+    pub fn parse_strings(&mut self, args: Vec<String>) -> Result<(), String> {
+        dbstln!("args: {:?}", args);
+        self.current_exe = env::current_exe()
+            .map(|s| s.to_string_lossy().into_owned())
+            .ok();
+        self.current_dir = env::current_dir()
+            .map(|s| s.to_string_lossy().into_owned())
+            .ok();
+        self.home_dir = env::home_dir().map(|s| s.to_string_lossy().into_owned());
+        self.temp_dir = env::temp_dir().to_string_lossy().into_owned();
+        let commands: Vec<String> = self.sub_cmds.keys().map(|s| s.to_string()).collect();
+        let (mut idx, mut sub_cmd_name) = (std::usize::MAX, "");
+        'out: for i in 0..args.len() {
+            for cmd in &commands {
+                if args[i] == **cmd {
+                    idx = i;
+                    sub_cmd_name = args[i].as_str();
+                    if let Some(ref mut s) = self.current_cmd {
+                        s.clear();
+                        s.push_str(sub_cmd_name);
+                    }
+                    break 'out;
                 }
             }
         }
+        if idx != std::usize::MAX {
+            self.main.parse(&args[0..idx])?;
+            self.sub_cmds
+                .get_mut(sub_cmd_name)
+                .unwrap()
+                .parse(&args[idx + 1..])?;
+        } else {
+            self.main.parse(&args[..])?;
+        }
+        if unsafe { HELP } {
+            self.help();
+            exit(0);
+        } else if unsafe { HELP_SUBCMD } {
+            self.help_cmd(sub_cmd_name);
+            exit(0);
+        } else if unsafe { VERSION } {
+            self.ver();
+            exit(0);
+        }
+        Ok(())
+    }
+    fn ver(&self) {
+        println!("{}  {}", self.name.trim(), self.version.trim());
+    }
+    // NAME
+    fn help_name(&self) -> String {
+        format!("NAME:\n  {} - {}\n  {}\n",
+                self.name.trim(),
+                self.version.trim(),
+                self.main.desc.trim())
+    }
+    fn help_global_opt(&self) -> String {
+        // GLOBAL OPTIONS:
+        let mut help = String::new();
+        if !self.main.opts.is_empty() {
+            help += &{
+                         let mut tmp = "\nGLOBAL OPTIONS:\n".to_owned();
+                         let mut vs: Vec<(String, &str)> = Vec::new();
+                         let mut len = 0;
+                         for (k, v) in &self.main.opts {
+                             let s = v.short_get().unwrap_or_else(String::new);
+                             let long = v.long_get().unwrap_or_else(String::new);
+                             let tmp_ = if v.is_bool() {
+                                 if s != "" && long != "" {
+                                     format!("   {},{}  ", long, s)
+                                 } else {
+                                     format!("   {}{}  ", long, s)
+                                 }
+                             } else if s != "" && long != "" {
+                        format!("   {} {},{} {}  ", long, k, s, k)
+                    } else {
+                        format!("   {}{} {}  ", s, long, k)
+                    };
+                             if tmp_.len() > len {
+                                 len = tmp_.len();
+                             }
+                             vs.push((tmp_, v.help_get()));
+                         }
+                         for (k, v) in vs {
+                             let mut tmp_ = k.clone();
+                             for _ in tmp_.len()..len {
+                                 tmp_.push(' ');
+                             }
+                             tmp += &format!("{}  {}\n", tmp_, v.trim());
+                         }
+                         tmp
+                     }
+        }
+        help
+    }
+    pub fn help(&self) {
+        // NAME
+        let mut help = self.help_name();
+        //Author
+        if !self.authors.is_empty() {
+            help += &{
+                         let mut authors = String::new() + "\nAUTHOR:\n";
+                         for &(author, email) in &self.authors {
+                             authors += &format!("  {} <{}>\n", author, email);
+                         }
+                         authors
+                     };
+        }
+        //ADDRESS
+        if !self.addrs.is_empty() {
+            help += &{
+                         let mut authors = String::new() + "\nADDRESS:\n";
+                         for &(author, email) in &self.addrs {
+                             authors += &format!("  {}: {}\n", author, email);
+                         }
+                         authors
+                     };
+        }
+        //USAGE
+        //    zipcs [global options] [global arguments] command [command options] [arguments...]
+        help += &{
+                     let mut tmp = format!("\nUSAGE:\n  {}", self.name);
+                     if !self.main.opts.is_empty() {
+                         tmp += " [global options]";
+                     }
+                     if self.main.args.is_some() {
+                         tmp += &format!(" [{}...]", self.main.args_name);
+                     }
+                     if !self.sub_cmds.is_empty() {
+                         tmp += " command [command options] [arguments...]";
+                     }
+                     tmp + "\n"
+                 };
+        // GLOBAL OPTIONS:
+        help += &self.help_global_opt();
+        // SUBCOMMANDS
+        if !self.sub_cmds.is_empty() {
+            help += &{
+                         let mut tmp = "\nCOMMANDS:\n".to_owned();
+                         let mut vs: Vec<(String, &str)> = Vec::new();
+                         let mut len = 0;
+                         for (k, v) in &self.sub_cmds {
+                             let tmp_ = format!("    {}  ", k);
+                             if tmp_.len() > len {
+                                 len = tmp_.len();
+                             }
+                             vs.push((tmp_, v.desc));
+                         }
+                         for (k, v) in vs {
+                             let mut tmp_ = k.clone();
+                             for _ in tmp_.len()..len {
+                                 tmp_.push(' ');
+                             }
+                             tmp += &format!("{}  {}\n", tmp_, v.trim());
+                         }
+                         tmp
+                     };
+        }
+        println!("{}", help);
+    }
+    pub fn help_cmd(&self, sub_cmd_name: &str) {
+        // NAME
+        let mut help = self.help_name();
+        //USAGE
+        //    zipcs [global options] [global arguments] command [command options] [arguments...]
+        help += &{
+                     let mut tmp = format!("\nUSAGE:\n  {}", self.name);
+                     if !self.main.opts.is_empty() {
+                         tmp += " [global options]";
+                     }
+                     if self.main.args.is_some() {
+                         tmp += &format!(" [{}...]", self.main.args_name);
+                     }
+                     if let Some(s) = self.sub_cmds.get(sub_cmd_name) {
+                         if !s.opts.is_empty() && s.args.is_some() {
+                             tmp += &format!(" {} [{} options] [{}...]", s.name, s.name, s.args_name);
+                         } else if !s.opts.is_empty() && s.args.is_none() {
+                    tmp += &format!(" {} [{} options]", s.name, s.name);
+                } else if s.opts.is_empty() && s.args.is_some() {
+                    tmp += &format!(" {} [{}...]", s.name, s.args_name);
+                }
+                     }
+                     tmp + "\n"
+                 };
+        // GLOBAL OPTIONS:
+        help += &self.help_global_opt();
+        // SubCMD OPTIONS
+        let cmd = self.sub_cmds.get(sub_cmd_name).unwrap();
+        if !cmd.opts.is_empty() {
+            help += &{
+                         let mut tmp = "\nOPTIONS:\n".to_owned();
+                         let mut vs: Vec<(String, &str)> = Vec::new();
+                         let mut len = 0;
+                         for (k, v) in &cmd.opts {
+                             let s = v.short_get().unwrap_or_else(String::new);
+                             let long = v.long_get().unwrap_or_else(String::new);
+                             let tmp_ = if v.is_bool() {
+                                 if s != "" && long != "" {
+                                     format!("    {},{}  ", long, s)
+                                 } else {
+                                     format!("    {}{}  ", long, s)
+                                 }
+                             } else if s != "" && long != "" {
+                        format!("    {} {},{} {}  ", long, k, s, k)
+                    } else {
+                        format!("    {}{} {}  ", s, long, k)
+                    };
+                             if tmp_.len() > len {
+                                 len = tmp_.len();
+                             }
+                             vs.push((tmp_, v.help_get()));
+                         }
+                         for (k, v) in vs {
+                             let mut tmp_ = k.clone();
+                             for _ in tmp_.len()..len {
+                                 tmp_.push(' ');
+                             }
+                             tmp += &format!("{}  {}\n", tmp_, v.trim());
+                         }
+                         tmp
+                     }
+        }
+        println!("{}", help);
+    }
+    pub fn current_cmd_get(&self) -> Option<String> {
+        if let Some(ref s) = self.current_cmd {
+            Some(s.to_string())
+        } else {
+            None
+        }
+    }
+    pub fn current_exe(&self) -> Option<&String> {
+        self.current_exe.as_ref()
+    }
+    pub fn current_dir(&self) -> Option<&String> {
+        self.current_dir.as_ref()
+    }
+    pub fn home_dir(&self) -> Option<&String> {
+        self.home_dir.as_ref()
+    }
+    pub fn temp_dir(&self) -> &String {
+        &self.temp_dir
+    }
+}
+
+///Command strcut
+#[derive(Debug,Default)]
+pub struct Cmd<'app> {
+    name: &'app str,
+    desc: &'app str,
+    opts: Map<String, Opt<'app>>,
+    str_to_name: Map<String, String>, //-short/--long to name
+    args_name: String,
+    args: Option<&'app mut Vec<String>>,
+}
+impl<'app> Cmd<'app> {
+    pub fn new<'s: 'app>(name: &'s str) -> Self {
+        let mut c = Self::default();
+        c.name = name;
+        c
+    }
+    pub fn desc<'s: 'app>(mut self, desc: &'s str) -> Self {
+        self.desc = desc;
+        self
+    }
+    pub fn args<'s: 'app, S>(mut self, name: S, value: &'s mut Vec<String>) -> Self
+        where S: Into<String>
+    {
+        self.args = Some(value);
+        self.args_name = name.into();
+        self
+    }
+    pub fn opt(mut self, opt: Opt<'app>) -> Self {
+        let long = opt.long_get();
+        let short = opt.short_get();
+        let name = opt.name_get().to_string();
+        if long.is_none() && short.is_none() {
+            panic!("OPTION: \"{}\" don't have --{} and -{} all",
+                   name,
+                   name,
+                   name);
+        }
+        if let Some(ref s) = long {
+            if self.str_to_name
+                   .insert(s.clone(), name.clone())
+                   .is_some() {
+                panic!("long: \"{}\" already defined", s);
+            }
+        }
+        if let Some(ref s) = short {
+            if self.str_to_name
+                   .insert(s.clone(), name.clone())
+                   .is_some() {
+                panic!("short: \"{}\" already defined", s);
+            }
+        }
+        if self.opts.insert(name.clone(), opt).is_some() {
+            panic!("name: \"{}\" already defined", name);
+        }
+        self
+    }
+    fn parse(&mut self, args: &[String]) -> Result<(), String> {
         let mut i = 0;
         for _ in 0..args.len() {
             if i >= args.len() {
                 break;
             }
             let arg = &args[i];
-
-            if arg.starts_with("--") && arg.len() > 2 {
-                let opt_name = match long_to_name.get(&arg[2..]) {
-                    Some(s) => s,
-                    None => {
-                        err!("Don't have the option: {:?}", arg);
-                        exit(1);
-                    }
-                };
-                match &arg[2..] {
-                    _ if self.flags.get(opt_name).is_some() => {
-                        let opt = self.flags.get_mut(opt_name);
-                        if let Some(mut opt) = opt {
-                            opt.value = Some(true);
+            // println!("i+1/args_len: {}/{}: {:?}", i + 1, args.len(), &args[i..]);
+            match arg {
+                s if s.starts_with("--") => {
+                    if let Some(opt_name) = self.str_to_name.get(s.as_str()) {
+                        let mut opt = self.opts.get_mut(opt_name).unwrap();
+                        let opt_is_bool = opt.is_bool();
+                        if !opt_is_bool && args.len() > i + 1 {
+                            opt.parse(&args[i + 1])?;
+                            i += 2;
+                        } else if opt_is_bool {
+                            opt.parse("")?;
+                            i += 1;
+                        } else {
+                            return Err(format!("OPTION: \"{}\" no value provided", s));
                         }
-                        i += 1;
-                        continue;
+                    } else {
+                        return Err(format!("OPTION: \"{}\" not defined", s));
                     }
-                    _ if self.opts.get(opt_name).is_some() => {
-                        if args.len() <= i + 1 {
-                            err!("Null value for the option: {:?}", arg);
-                            exit(1);
-                        }
-                        let opt = self.opts.get_mut(opt_name);
-                        if let Some(mut opt) = opt {
-                            if opt.valid_values.is_empty() || opt.valid_values.contains(&args[i + 1]) {
-                                opt.value = Some((&args[i + 1]).to_string());
-                            } else {
-                                err!("Invalid value '{}' for the option: {:?}", &args[i + 1], arg);
-                                exit(1);
-                            }
-                        }
-                        i += 2;
-                        continue;
-                    }
-                    _ => unreachable!(),
-                };
-            } else if arg.starts_with('-') && arg.len() > 1 {
-                let opt_name = match short_to_name.get(&arg[1..]) {
-                    Some(s) => s,
-                    None => {
-                        err!("Don't have the option: {:?}", arg);
-                        exit(1);
-                    }
-                };
-                let opt_name = &opt_name.to_string();
-                match &arg[1..] {
-                    _ if self.flags.get(opt_name).is_some() => {
-                        let opt = self.flags.get_mut(opt_name);
-                        if let Some(mut opt) = opt {
-                            opt.value = Some(true);
-                        }
-                        i += 1;
-                        continue;
-                    }
-                    _ if self.opts.get(opt_name).is_some() => {
-                        if args.len() <= i + 1 {
-                            err!("Null value for the option: {:?}", arg);
-                            exit(1);
-                        }
-                        let opt = self.opts.get_mut(opt_name);
-                        if let Some(mut opt) = opt {
-                            if opt.valid_values.is_empty() || opt.valid_values.contains(&args[i + 1]) {
-                                opt.value = Some((&args[i + 1]).to_string());
-                            } else {
-                                err!("Invalid value '{}' for the option: {:?}", &args[i + 1], arg);
-                                exit(1);
-                            }
-                        }
-                        i += 2;
-                        continue;
-                    }
-                    _ => unreachable!(),
-                };
-            } else {
-                self.args.push(arg.to_string());
-                i += 1;
-            }
-        }
-        // 处理default和must
-        for v in self.opts.values_mut() {
-            if v.value.is_none() && v.default.is_some() {
-                v.value = Some(v.default.as_ref().unwrap().to_string());
-            }
-            if v.value.is_none() && v.must {
-                err!("option: {}(-{:?}/--{:?}) is must",
-                     v.opt_name,
-                     v.short,
-                     v.long);
-                exit(1);
-            }
-        }
-        for v in self.flags.values_mut() {
-            if v.value.is_none() && v.must {
-                err!("option: {}(-{:?}/--{:?}) is must",
-                     v.flag_name,
-                     v.short,
-                     v.long);
-                exit(1);
-            }
-        }
-        if self.args.is_empty() && self.args_default.is_some() {
-            self.args.push(self.args_default.unwrap().to_string());
-        }
-        if self.args.is_empty() && self.args_must {
-            err!("args: '{}' is must", self.args_name.unwrap());
-            exit(1);
-        }
-        self
-    }
-    fn help(self) {
-        if self.version.is_some() {
-            println!("{}  v{}", self.name, self.version.unwrap());
-        } else {
-            println!("{}", self.name);
-        }
-        for (author, email) in self.author {
-            println!("{}  <{}>", author, email);
-        }
-        for (name, addr) in self.address {
-            println!("{}:  {}", name, addr);
-        }
-        if let Some(s) = self.about {
-            println!("{}\n", s);
-        }
-        println!("USAGE:\n");
-        if self.args_name.is_some() && !self.opts.is_empty() {
-            println!("\t{} [{}] [{}]",
-                     self.name,
-                     "OPTIONS",
-                     self.args_name.unwrap());
-        }
-        println!("\t{} {}\n", self.name, "FLAG");
-        // 打印FLAGS
-        println!("FLAGS:");
-        let mut vec_flag: Vec<Vec<String>> = Vec::new();
-        for flag in self.flags.values() {
-            let mut tmp = Vec::new();
-            let mut str0 = String::new();
-            if let Some(s) = flag.short {
-                str0 = str0 + &format!("-{}", s);
-            }
-            if let Some(s) = flag.long {
-                if !str0.is_empty() {
-                    str0 += ", ";
                 }
-                str0 = str0 + &format!("--{}", s);
-            }
-            if let Some(help) = flag.help {
-                tmp.push(str0);
-                tmp.push(help.to_string());
-            } else {
-                tmp.push(str0);
-            }
-            vec_flag.push(tmp);
-        }
-        let mut len_max = 0;
-        for str in vec_flag.iter() {
-            if str[0].len() > len_max {
-                len_max = str[0].len();
-            }
-        }
-        let blanks = |msg: &String, len| {
-            let blank_num = len - msg.len();
-            String::new() + msg + &" ".repeat(blank_num)
-        };
-        for strs in vec_flag.iter() {
-            if strs.len() > 1 {
-                println!("\t{}{}", blanks(&strs[0], len_max + 4), strs[1]);
-            } else {
-                println!("\t{}", blanks(&strs[0], len_max + 4));
-            }
-        }
-
-        // 打印OPTIONS
-        println!("\nOPTIONS:");
-        let mut vec_opts: Vec<Vec<String>> = Vec::new();
-        for opt in self.opts.values() {
-            let mut tmp = Vec::new();
-            let mut str0 = String::new();
-            if let Some(s) = opt.short {
-                str0 = str0 + &format!("-{}", s);
-            }
-            if let Some(s) = opt.long {
-                if !str0.is_empty() {
-                    str0 += ", ";
+                s if s.starts_with('-') => {
+                    if let Some(opt_name) = self.str_to_name.get(s.as_str()) {
+                        let mut opt = self.opts.get_mut(opt_name).unwrap();
+                        let opt_is_bool = opt.is_bool();
+                        if !opt_is_bool && args.len() > i + 1 {
+                            opt.parse(&args[i + 1])?;
+                            i += 2;
+                        } else if opt_is_bool {
+                            opt.parse("")?;
+                            i += 1;
+                        } else {
+                            return Err(format!("OPTION: \"{}\" no value provided", s));
+                        }
+                    } else {
+                        return Err(format!("OPTION: \"{}\" not defined", s));
+                    }
                 }
-                str0 = str0 + &format!("--{}", s);
-            }
-            str0 += &format!(" <{}>", opt.opt_name);
-            if let Some(help) = opt.help {
-                tmp.push(str0);
-                tmp.push(help.to_string());
-            } else {
-                tmp.push(str0);
-            }
-            vec_opts.push(tmp);
-        }
-        let mut len_max = 0;
-        for str in vec_opts.iter() {
-            if str[0].len() > len_max {
-                len_max = str[0].len();
+                s => {
+                    if let Some(ref mut ss) = self.args {
+                        ss.push(s.to_string());
+                        i += 1;
+                    } else {
+                        return Err(format!("args: \"{}\" don't need", s));
+                    }
+                }
             }
         }
-        for strs in vec_opts.iter() {
-            if strs.len() > 1 {
-                println!("\t{}{}", blanks(&strs[0], len_max + 4), strs[1]);
-            } else {
-                println!("\t{}", blanks(&strs[0], len_max + 4));
-            }
-        }
-        if let Some(s) = self.args_name {
-            println!("\nARGS");
-            println!("<{}>\t\t\t{}", s, self.args_help.unwrap());
-        }
-        exit(0);
-    }
-
-    fn ver(&self) {
-        println!("{}  v{}", self.name, self.version.unwrap());
-        exit(0);
-    }
-
-    pub fn get_opt(&self, key: &str) -> Option<String> {
-        if let Some(s) = self.opts.get(key) {
-            return s.value.clone();
-        }
-        None
-    }
-    pub fn get_flag(&self, key: &str) -> Option<bool> {
-        if let Some(s) = self.flags.get(key) {
-            return s.value;
-        }
-        None
-    }
-    pub fn get_args(&self) -> Option<Vec<String>> {
-        if self.args_name.is_some() {
-            return Some(self.args.clone());
-        }
-        None
+        Ok(())
     }
 }
+
+/// Option struct
+#[derive(Debug)]
+pub struct Opt<'app> {
+    name: &'app str,
+    value: OptValue<'app>,
+    short: Option<&'app str>,
+    long: Option<&'app str>,
+    help: &'app str,
+}
+impl<'app> Opt<'app> {
+    pub fn new<'s: 'app, V>(name: &'app str, value: V) -> Self
+        where V: OptValueParse<'app>
+    {
+        Opt {
+            value: value.into_opt_value(),
+            name: name,
+            short: None,
+            long: None,
+            help: "",
+        }
+    }
+    pub fn short(mut self, short: &'app str) -> Self {
+        self.short = Some(short);
+        self
+    }
+    pub fn long(mut self, long: &'app str) -> Self {
+        self.long = Some(long);
+        self
+    }
+    pub fn help(mut self, help: &'app str) -> Self {
+        self.help = help;
+        self
+    }
+    fn parse(&mut self, msg: &str) -> Result<(), String> {
+        let name = self.name_get().to_string();
+        self.value.inner.parse(name, msg)
+    }
+}
+
+impl<'app> Opt<'app> {
+    pub fn is_bool(&self) -> bool {
+        self.value.inner.is_bool()
+    }
+    pub fn name_get(&self) -> &'app str {
+        self.name
+    }
+    pub fn short_get(&self) -> Option<String> {
+        self.short.map(|s| "-".to_owned() + s)
+    }
+    pub fn long_get(&self) -> Option<String> {
+        self.long.map(|s| "--".to_owned() + s)
+    }
+    pub fn help_get(&self) -> &str {
+        self.help
+    }
+}
+
+/// `OptValue` struct
+#[derive(Debug)]
+pub struct OptValue<'app> {
+    pub inner: Box<OptValueParse<'app> + 'app>,
+}
+
+/// `OptValueParse` trait, you can use custom `OptValue` by `impl` it
+///
+///
+/// `into_opt_value(self)` convert it(`&mut T`)  to `OptValue`.
+///
+///
+/// `is_bool(&self)` like `--help/-h`,they not have value follows it,so you should return false.
+///
+///
+/// `parse(&mut self, opt_name: String, msg: &str)` maintains the value, and return message by `Result<(),String>`.
+///
+/// `opt_name` is current `Opt`'s name, `msg` is `&str` need to pasre.
+///
+
+pub trait OptValueParse<'app>: Debug {
+    fn into_opt_value(self) -> OptValue<'app>;
+    fn is_bool(&self) -> bool;
+    fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String>;
+}
+
+impl<'app, 's: 'app> OptValueParse<'app> for &'s mut bool {
+    fn into_opt_value(self) -> OptValue<'app> {
+        OptValue { inner: Box::new(self) }
+    }
+    fn is_bool(&self) -> bool {
+        true
+    }
+    fn parse(&mut self, _: String, _: &str) -> Result<(), String> {
+        **self = true;
+        Ok(())
+    }
+}
+impl<'app, 's: 'app> OptValueParse<'app> for &'s mut String {
+    fn into_opt_value(self) -> OptValue<'app> {
+        OptValue { inner: Box::new(self) }
+    }
+    fn is_bool(&self) -> bool {
+        false
+    }
+    fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
+        **self = msg.to_string();
+        Ok(())
+    }
+}
+impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<String> {
+    fn into_opt_value(self) -> OptValue<'app> {
+        OptValue { inner: Box::new(self) }
+    }
+    fn is_bool(&self) -> bool {
+        false
+    }
+    fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
+        self.clear(); // What due to ?
+        let _ = msg.split(',')
+            .filter(|s| !s.is_empty())
+            .map(|ss| self.push(ss.to_string()));
+        Ok(())
+    }
+}
+impl<'app, 's: 'app> OptValueParse<'app> for &'s mut char {
+    fn into_opt_value(self) -> OptValue<'app> {
+        OptValue { inner: Box::new(self) }
+    }
+    fn is_bool(&self) -> bool {
+        false
+    }
+    fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
+        if msg.len() == 1 {
+            **self = msg.chars().next().unwrap();
+        } else {
+            return Err(format!("OPTION({}) parse<char> fails: \"{}\"", opt_name, msg));
+        }
+        Ok(())
+    }
+}
+impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<char> {
+    fn into_opt_value(self) -> OptValue<'app> {
+        OptValue { inner: Box::new(self) }
+    }
+    fn is_bool(&self) -> bool {
+        false
+    }
+    fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
+        self.clear();
+        for c in msg.chars() {
+            self.push(c);
+        }
+        Ok(())
+    }
+}
+macro_rules! add_impl {
+    ($($t:ty)*) => ($(
+        impl<'app, 's: 'app> OptValueParse<'app> for &'s mut $t {
+        fn into_opt_value(self) -> OptValue<'app> {
+        OptValue { inner: Box::new(self) }
+    }
+    fn is_bool(&self) -> bool {
+        false
+    }
+    fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
+        **self = msg.parse::<$t>()
+                .map_err(|_| format!("OPTION({}) parse<{}> fails: \"{}\"", opt_name, stringify!($t),msg))?;
+                Ok(())
+    }
+        }
+    )*)
+}
+
+add_impl! { usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 }
+add_impl! {IpAddr Ipv4Addr Ipv6Addr SocketAddr SocketAddrV4 SocketAddrV6}
+
+macro_rules! add_vec_impl {
+    ($($t:ty)*) => ($(
+        impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<$t> {
+        fn into_opt_value(self) -> OptValue<'app> {
+        OptValue { inner: Box::new(self) }
+    }
+    fn is_bool(&self) -> bool {
+        false
+    }
+    fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
+                self.clear();
+                let vs: Vec<&str> = msg.split(',').filter(|s| !s.is_empty()).collect();
+                for str in &vs {
+                    self.push(str.parse::<$t>()
+                               .map_err(|_| {
+                                            format!("OPTION({}) parse<Vec<{}>> fails: \"{}/{}\"",
+                                                    opt_name,
+                                                    stringify!($t),
+                                                    str,
+                                                    msg)
+                                        })?)
+                }
+                Ok(())
+    }
+        }
+    )*)
+}
+add_vec_impl! { bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 }
+add_vec_impl! {IpAddr Ipv4Addr Ipv6Addr SocketAddr SocketAddrV4 SocketAddrV6}
