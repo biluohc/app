@@ -4,9 +4,11 @@ include!("../examples/fht2p.rs");
 #[test]
 fn main_() {
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ -h";
-    let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run -h";
+    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run -h";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -h";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./";
+    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run";
+    let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -r";
     // let args = "/path0 -p 8080,8000,80_  /path1 -ka /path2 --user Loli,16,./ run -h";
     let args: Vec<String> = args.split_whitespace().map(|s| s.to_string()).collect();
     fun_(args);
@@ -49,6 +51,7 @@ fn fun_(args: Vec<String>) {
         //You should use app.parse(), app.parse_strings(args) is write for test conveniently.
         if let Err(e) = app.parse_strings(args) {
             println!("{}", e);
+            std::process::exit(1);
         }
         // println!("\n{:?}", app);
     }

@@ -7,13 +7,13 @@ Cargo.toml
 
 ```toml
     [dependencies]  
-    app = "^0.2.1" 
+    app = "^0.3.0" 
 ```
 ## Or 
 
 ```toml
     [dependencies]  
-    app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.2.1" }
+    app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.3.0" }
 ```
 
 ## Documentation  
@@ -26,7 +26,7 @@ or
 ```
     git clone https://github.com/biluohc/app-rs
     cd app-rs
-    cargo run --example fht2p
+    cargo run --example fht2p --release
 ```
 
 
@@ -34,5 +34,5 @@ or
 ```
     git clone https://github.com/biluohc/zipcs
     cd zipcs
-    cargo run
+    cargo run --release
 ```
