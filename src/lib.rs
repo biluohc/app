@@ -9,17 +9,17 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "^0.2.0"
+//!  app = "^0.2.1"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.2.0" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.2.1" }
 //! ```
 //!
 //! ## Examples
-//! * [fht2p](https://github.com/biluohc/app-rs/blob/master/tests/main.rs)
+//! * [fht2p](https://github.com/biluohc/app-rs/blob/master/examples/fht2p.rs)
 //! * [zipcs](https://github.com/biluohc/zipcs)
 
 #[macro_use]
@@ -111,6 +111,9 @@ impl<'app> App<'app> {
         if self.sub_cmds.insert(name.clone(), cmd).is_some() {
             panic!("sub_command: \"{}\" already defined", name);
         }
+        if self.current_cmd.is_none() {
+            panic!("current_cmd's value no defined");
+        }
         self
     }
     pub fn current_cmd<'s: 'app>(mut self, value: &'s mut String) -> Self {
@@ -151,13 +154,13 @@ impl<'app> App<'app> {
                 if args[i] == **cmd {
                     idx = i;
                     sub_cmd_name = args[i].as_str();
-                    if let Some(ref mut s) = self.current_cmd {
-                        s.clear();
-                        s.push_str(sub_cmd_name);
-                    }
                     break 'out;
                 }
             }
+        }
+        if let Some(ref mut s) = self.current_cmd {
+            s.clear();
+            s.push_str(sub_cmd_name);
         }
         if idx != std::usize::MAX {
             self.main.parse(&args[0..idx])?;
@@ -292,7 +295,7 @@ impl<'app> App<'app> {
                          tmp
                      };
         }
-        println!("{}", help);
+        println!("{}", help.trim());
     }
     pub fn help_cmd(&self, sub_cmd_name: &str) {
         // NAME
@@ -356,7 +359,7 @@ impl<'app> App<'app> {
                          tmp
                      }
         }
-        println!("{}", help);
+        println!("{}", help.trim());
     }
     pub fn current_cmd_get(&self) -> Option<&str> {
         if let Some(ref s) = self.current_cmd {

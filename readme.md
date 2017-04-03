@@ -7,13 +7,13 @@ Cargo.toml
 
 ```toml
     [dependencies]  
-    app = "^0.2.0" 
+    app = "^0.2.1" 
 ```
 ## Or 
 
 ```toml
     [dependencies]  
-    app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.2.0" }
+    app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.2.1" }
 ```
 
 ## Documentation  
@@ -22,5 +22,17 @@ or
 * Run `cargo doc --open` after modified the toml file.
 
 ## Examples
-* [fht2p](https://github.com/biluohc/app-rs/blob/master/tests/main.rs)
+* [fht2p](https://github.com/biluohc/app-rs/blob/master/examples/fht2p.rs)
+```
+    git clone https://github.com/biluohc/app-rs
+    cd app-rs
+    cargo run --example fht2p
+```
+
+
 * [zipcs](https://github.com/biluohc/zipcs)
+```
+    git clone https://github.com/biluohc/zipcs
+    cd zipcs
+    cargo run
+```
