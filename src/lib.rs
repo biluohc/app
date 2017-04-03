@@ -358,9 +358,9 @@ impl<'app> App<'app> {
         }
         println!("{}", help);
     }
-    pub fn current_cmd_get(&self) -> Option<String> {
+    pub fn current_cmd_get(&self) -> Option<&str> {
         if let Some(ref s) = self.current_cmd {
-            Some(s.to_string())
+            Some(s)
         } else {
             None
         }
