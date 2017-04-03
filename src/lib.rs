@@ -9,13 +9,13 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "^0.3.1"
+//!  app = "^0.4.0"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.3.1" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.4.0" }
 //! ```
 //!
 //! ## Examples
@@ -35,6 +35,7 @@ use std::env;
 static mut HELP: bool = false;
 static mut HELP_SUBCMD: bool = false;
 static mut VERSION: bool = false;
+const MUST: &'static str = "(Must)";
 
 /// application struct
 #[derive(Debug,Default)]
@@ -234,18 +235,19 @@ impl<'app> App<'app> {
                          let mut vs: Vec<(String, &str)> = Vec::new();
                          let mut len = 0;
                          for (k, v) in &self.main.opts {
+                             let must = if v.value.inner.is_must() { MUST } else { "" };
                              let s = v.short_get().unwrap_or_else(String::new);
                              let long = v.long_get().unwrap_or_else(String::new);
                              let tmp_ = if v.is_bool() {
                                  if s != "" && long != "" {
-                                     format!("   {},{}  ", long, s)
+                                     format!("   {},{}{}  ", long, s, must)
                                  } else {
-                                     format!("   {}{}  ", long, s)
+                                     format!("   {}{}{}  ", long, s, must)
                                  }
                              } else if s != "" && long != "" {
-                        format!("   {} {},{} {}  ", long, k, s, k)
+                        format!("   {} {},{} {}{}  ", long, k, s, k, must)
                     } else {
-                        format!("   {}{} {}  ", s, long, k)
+                        format!("   {}{} {}{}  ", s, long, k, must)
                     };
                              if tmp_.len() > len {
                                  len = tmp_.len();
@@ -363,18 +365,19 @@ impl<'app> App<'app> {
                          let mut vs: Vec<(String, &str)> = Vec::new();
                          let mut len = 0;
                          for (k, v) in &cmd.opts {
+                             let must = if v.value.inner.is_must() { MUST } else { "" };
                              let s = v.short_get().unwrap_or_else(String::new);
                              let long = v.long_get().unwrap_or_else(String::new);
                              let tmp_ = if v.is_bool() {
                                  if s != "" && long != "" {
-                                     format!("    {},{}  ", long, s)
+                                     format!("    {},{}{}  ", long, s, must)
                                  } else {
-                                     format!("    {}{}  ", long, s)
+                                     format!("    {}{}{}  ", long, s, must)
                                  }
                              } else if s != "" && long != "" {
-                        format!("    {} {},{} {}  ", long, k, s, k)
+                        format!("    {} {},{} {}{}  ", long, k, s, k, must)
                     } else {
-                        format!("    {}{} {}  ", s, long, k)
+                        format!("    {}{} {}{}  ", s, long, k, must)
                     };
                              if tmp_.len() > len {
                                  len = tmp_.len();
@@ -602,6 +605,15 @@ pub struct OptValue<'app> {
 ///    so you should return `false` except value's type is `&mut bool`(it already defined).
 ///
 ///
+/// * `is_must(&self)` if it's true, `app` will add a `must` tag for it's help.
+///
+///     `String.is_empty()`, `Option<T>.is_none()`, `Vec<T>.is_empty()` in default `impl`
+///
+///     ```fuckrs
+///         --user user,-u user(Must)       Sets user information
+///     ```
+///
+///
 /// * `parse(&mut self, opt_name: String, msg: &str)` maintains the value, and return message by `Result<(),String>`.
 ///
 ///   `opt_name` is current `Opt`'s name, `msg` is `&str` need to pasre.
@@ -634,6 +646,7 @@ pub struct OptValue<'app> {
 pub trait OptValueParse<'app>: Debug {
     fn into_opt_value(self) -> OptValue<'app>;
     fn is_bool(&self) -> bool;
+    fn is_must(&self) -> bool;
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String>;
     fn check(&self, opt_name: &str) -> Result<(), String>;
 }
@@ -644,6 +657,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut bool {
     }
     fn is_bool(&self) -> bool {
         true
+    }
+    fn is_must(&self) -> bool {
+        false
     }
     fn parse(&mut self, _: String, _: &str) -> Result<(), String> {
         **self = true;
@@ -659,6 +675,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut String {
     }
     fn is_bool(&self) -> bool {
         false
+    }
+    fn is_must(&self) -> bool {
+        self.is_empty()
     }
     fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
         **self = msg.to_string();
@@ -678,6 +697,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut char {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
+        false
+    }
+    fn is_must(&self) -> bool {
         false
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
@@ -702,6 +724,9 @@ macro_rules! add_impl {
     fn is_bool(&self) -> bool {
         false
     }
+    fn is_must(&self) -> bool {
+        false
+    }   
     fn parse(&mut self, opt_name : String, msg: &str) -> Result<(), String> {
         **self = msg.parse::<$t>()
                 .map_err(|_| format!("OPTION({}) parse<{}> fails: \"{}\"", opt_name, stringify!($t),msg))?;
@@ -723,6 +748,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<char> {
     }
     fn is_bool(&self) -> bool {
         false
+    }
+    fn is_must(&self) -> bool {
+        self.is_none()
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         if msg.len() == 1 {
@@ -748,6 +776,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<String> {
     fn is_bool(&self) -> bool {
         false
     }
+    fn is_must(&self) -> bool {
+        self.is_none()
+    }
     fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
         **self = Some(msg.to_string());
         Ok(())
@@ -769,6 +800,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<$t> {
     }
     fn is_bool(&self) -> bool {
         false
+    }
+    fn is_must(&self) -> bool {
+        self.is_none()
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         **self = Some(msg.parse::<$t>()
@@ -801,6 +835,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<char> {
     fn is_bool(&self) -> bool {
         false
     }
+    fn is_must(&self) -> bool {
+        self.is_empty()
+    }
     fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
         self.clear();
         for c in msg.chars() {
@@ -819,6 +856,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<String> {
     }
     fn is_bool(&self) -> bool {
         false
+    }
+    fn is_must(&self) -> bool {
+        self.is_empty()
     }
     fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
         self.clear(); // What due to ?
@@ -844,6 +884,9 @@ macro_rules! add_vec_impl {
     }
     fn is_bool(&self) -> bool {
         false
+    }
+    fn is_must(&self) -> bool {
+        self.is_empty()
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
                 self.clear();

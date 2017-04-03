@@ -5,12 +5,12 @@ include!("../examples/fht2p.rs");
 fn main_() {
     // let args ="";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ -h";
-    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run -h";
+    let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run -h";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -h";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -r";
-    let args = "/path0 -p 8080,8000,80_  /path1 -ka /path2 --user Loli,16,./ run -h";
+    // let args = "/path0 -p 8080,8000,80_  /path1 -ka /path2 --user Loli,16,./ run -h";
     let args: Vec<String> = args.split_whitespace().map(|s| s.to_string()).collect();
     fun_(args);
 }
@@ -40,6 +40,10 @@ fn fun_(args: Vec<String>) {
             .current_cmd(&mut fht2p.sub_cmd)
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
+                     .opt(Opt::new("home", &mut fht2p.run.home)
+                              .short("hm")
+                              .long("home")
+                              .help("running in the home"))
                      .opt(Opt::new("log", &mut fht2p.run.log)
                               .long("log")
                               .help("running and print log")))

@@ -30,6 +30,10 @@ fn fun() {
             .current_cmd(&mut fht2p.sub_cmd)
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
+                     .opt(Opt::new("home", &mut fht2p.run.home)
+                              .short("hm")
+                              .long("home")
+                              .help("running in the home"))
                      .opt(Opt::new("log", &mut fht2p.run.log)
                               .long("log")
                               .help("running and print log")))
@@ -70,6 +74,7 @@ impl Fht2p {
 
 #[derive(Debug,Default)]
 struct Run {
+    home: String,
     log: bool,
 }
 
@@ -93,6 +98,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut User {
     // As --help/-h,they not have value follows it.
     fn is_bool(&self) -> bool {
         false
+    }
+    fn is_must(&self) -> bool {
+        true
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         self.name.clear();
