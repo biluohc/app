@@ -107,9 +107,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut User {
         self.address.push_str(vs[2]);
         Ok(())
     }
-    fn check(&self, opt_name:  &str) -> Result<(), String> {
+    fn check(&self, opt_name: &str) -> Result<(), String> {
         if self.name.is_empty() {
-             Err(format!("OPTION({})'s value missing", opt_name))
+            Err(format!("OPTION({})'s value missing", opt_name))
         } else {
             Ok(())
         }

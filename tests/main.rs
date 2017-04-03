@@ -3,13 +3,14 @@ include!("../examples/fht2p.rs");
 // cargo t -- --nocapture
 #[test]
 fn main_() {
+    // let args ="";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ -h";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run -h";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -h";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run";
-    let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -r";
-    // let args = "/path0 -p 8080,8000,80_  /path1 -ka /path2 --user Loli,16,./ run -h";
+    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -r";
+    let args = "/path0 -p 8080,8000,80_  /path1 -ka /path2 --user Loli,16,./ run -h";
     let args: Vec<String> = args.split_whitespace().map(|s| s.to_string()).collect();
     fun_(args);
 }

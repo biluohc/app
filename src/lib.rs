@@ -9,13 +9,13 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "^0.3.0"
+//!  app = "^0.3.1"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.3.0" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.3.1" }
 //! ```
 //!
 //! ## Examples
@@ -203,6 +203,14 @@ impl<'app> App<'app> {
             }
             for (_, opt) in &cmd.opts {
                 opt.value.inner.check(opt.name_get())?;
+            }
+        }
+        // No Args
+        if args.is_empty() && self.main.args.is_none() {
+            if self.sub_cmds.is_empty() {
+                return Err("OPTION missing".to_owned());
+            } else {
+                return Err("OPTION/COMMAND missing".to_owned());
             }
         }
         Ok(())
@@ -585,7 +593,7 @@ pub struct OptValue<'app> {
 /// ## You can use custom `OptValue` by `impl` it
 ///
 /// ### Explain
-/// 
+///
 /// * `into_opt_value(self)` convert it(`&mut T`)  to `OptValue`.
 ///
 ///
@@ -601,11 +609,11 @@ pub struct OptValue<'app> {
 /// * `check(&self, opt_name: &str)` check value  and return message by `Result<(),String>`.
 ///
 /// ### Suggestion
-/// 
+///
 /// * `T` is suitable for options with default values.
 ///
-///     You can initialize it using the default value. 
-/// 
+///     You can initialize it using the default value.
+///
 /// * `Option<T>` is suitable for necessary options.
 ///
 ///     `app` will `check` them, is `value.is_none()`, `app` will `exit(1)` after print error and help message.
