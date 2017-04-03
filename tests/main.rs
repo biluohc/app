@@ -1,18 +1,27 @@
 include!("../examples/fht2p.rs");
 
+#[macro_use]
+extern crate stderr;
+
 // cargo t -- --nocapture
 #[test]
 fn main_() {
-    // let args ="";
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ -h";
-    let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run -h";
+    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
+    let args = "src/ -p 8080,8000,80  tests/ -ka examples/ --user Loli,16,./ .git run -hm $HOME -h";
+    fun_(args.split_whitespace().map(|s| s.to_string()).collect());
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -h";
+    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./";
-    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run";
+    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
+    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run --home $HOME";
+    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
     // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -r";
+    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
     // let args = "/path0 -p 8080,8000,80_  /path1 -ka /path2 --user Loli,16,./ run -h";
-    let args: Vec<String> = args.split_whitespace().map(|s| s.to_string()).collect();
-    fun_(args);
+    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
+    // let args = "";
+    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
 }
 fn fun_(args: Vec<String>) {
     let mut fht2p = Fht2p::default();
@@ -37,6 +46,7 @@ fn fun_(args: Vec<String>) {
                      .long("user")
                      .help("Sets user information"))
             .args("Paths", &mut fht2p.routes)
+            .args_check(args_checker)
             .current_cmd(&mut fht2p.sub_cmd)
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
@@ -55,7 +65,17 @@ fn fun_(args: Vec<String>) {
                               .help("Build artifacts in release mode, with optimizations")));
         //You should use app.parse(), app.parse_strings(args) is write for test conveniently.
         if let Err(e) = app.parse_strings(args) {
-            println!("{}", e);
+            if e == String::new() {
+                std::process::exit(0); // -h/-v
+            }
+            errln!("ERROR:\n  {}\n", e);
+            if app.current_cmd_get().is_some() && app.current_cmd_get() != Some(&mut String::new()) {
+                if let Some(ref s) = app.current_cmd_get() {
+                    app.help_cmd(s);
+                }
+            } else {
+                app.help();
+            }
             std::process::exit(1);
         }
         // println!("\n{:?}", app);

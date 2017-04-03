@@ -9,13 +9,13 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "^0.4.0"
+//!  app = "^0.4.1"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.4.0" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.4.1" }
 //! ```
 //!
 //! ## Examples
@@ -101,6 +101,10 @@ impl<'app> App<'app> {
         self.main.args_name = name.into();
         self
     }
+    pub fn args_check<Checker: StringsChecker>(mut self, checker: Checker) -> Self {
+        self.main.args_check = checker.into_strings_check();
+        self
+    }
     pub fn cmd(mut self, mut cmd: Cmd<'app>) -> Self {
         let name = cmd.name.to_string();
         cmd = unsafe {
@@ -129,6 +133,9 @@ impl<'app> App<'app> {
         args.next();
         let args: Vec<String> = args.collect();
         if let Err(e) = self.parse_strings(args) {
+            if e == String::new() {
+                exit(0);
+            }
             errln!("ERROR:\n  {}\n", e);
             if self.current_cmd_get().is_some() && self.current_cmd_get() != Some(&mut String::new()) {
                 if let Some(ref s) = self.current_cmd_get() {
@@ -176,13 +183,13 @@ impl<'app> App<'app> {
         }
         if unsafe { HELP } {
             self.help();
-            exit(0);
+            return Err(String::new());
         } else if unsafe { HELP_SUBCMD } {
             self.help_cmd(sub_cmd_name);
-            exit(0);
+            return Err(String::new());
         } else if unsafe { VERSION } {
             self.ver();
-            exit(0);
+            return Err(String::new());
         }
         // check main.args
         if let Some(ref s) = self.main.args {
@@ -212,6 +219,18 @@ impl<'app> App<'app> {
                 return Err("OPTION missing".to_owned());
             } else {
                 return Err("OPTION/COMMAND missing".to_owned());
+            }
+        }
+        // Args checker
+        if let Some(ref s) = self.main.args {
+            self.main
+                .args_check
+                .call(&s[..], &self.main.args_name)?;
+        }
+        if sub_cmd_name != "" {
+            let cmd = self.sub_cmds.get(sub_cmd_name).unwrap();
+            if let Some(ref s) = cmd.args {
+                cmd.args_check.call(&s[..], &cmd.args_name)?;
             }
         }
         Ok(())
@@ -426,6 +445,7 @@ pub struct Cmd<'app> {
     str_to_name: Map<String, String>, //-short/--long to name
     args_name: String,
     args: Option<&'app mut Vec<String>>,
+    args_check: StringsCheck,
 }
 impl<'app> Cmd<'app> {
     pub fn new<'s: 'app>(name: &'s str) -> Self {
@@ -442,6 +462,10 @@ impl<'app> Cmd<'app> {
     {
         self.args = Some(value);
         self.args_name = name.into();
+        self
+    }
+    pub fn args_check<Checker: StringsChecker>(mut self, checker: Checker) -> Self {
+        self.args_check = checker.into_strings_check();
         self
     }
     pub fn opt(mut self, opt: Opt<'app>) -> Self {
@@ -527,6 +551,45 @@ impl<'app> Cmd<'app> {
             }
         }
         Ok(())
+    }
+}
+
+/// ## Closures checks Arguments and returns message
+///
+/// `&[String]` is the Arguments, `&str` is current_cmd's name, `main`s cmd_name is `""`.
+pub struct StringsCheck {
+    pub fn_: Box<Fn(&[String], &str) -> Result<(), String>>,
+}
+
+use std::default::Default;
+fn strings_checker_default(_: &[String], _: &str) -> Result<(), String> {
+    Ok(())
+}
+impl Default for StringsCheck {
+    fn default() -> StringsCheck {
+        StringsCheck { fn_: Box::new(strings_checker_default) }
+    }
+}
+
+use std::fmt;
+impl fmt::Debug for StringsCheck {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("StringsCheck {{ fn_: _ }}")
+    }
+}
+
+impl StringsCheck {
+    pub fn call(&self, msg: &[String], args_name: &str) -> Result<(), String> {
+        (*self.fn_)(msg, args_name)
+    }
+}
+pub trait StringsChecker {
+    fn into_strings_check(self) -> StringsCheck;
+}
+
+impl<F: Fn(&[String], &str) -> Result<(), String> + 'static> StringsChecker for F {
+    fn into_strings_check(self) -> StringsCheck {
+        StringsCheck { fn_: Box::from(self) }
     }
 }
 

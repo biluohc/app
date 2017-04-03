@@ -27,6 +27,7 @@ fn fun() {
                      .long("user")
                      .help("Sets user information"))
             .args("Paths", &mut fht2p.routes)
+            .args_check(args_checker)
             .current_cmd(&mut fht2p.sub_cmd)
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
@@ -54,6 +55,15 @@ fn fun() {
         "build" => {}        
         _ => unreachable!(),
     }
+}
+
+fn args_checker(msg: &[String], args_name: &str) -> Result<(), String> {
+    for path in msg {
+        if !std::path::Path::new(path).is_dir() {
+            return Err(format!("Argument({}): \"{}\" is invalid", args_name, path));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug,Default)]
