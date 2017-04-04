@@ -6,26 +6,21 @@ extern crate stderr;
 // cargo t -- --nocapture
 #[test]
 fn main_() {
-    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ -h";
-    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
-    let args = "src/ -p 8080,8000,80  tests/ -ka examples/ --user Loli,16,./ .git run -hm $HOME -h";
-    fun_(args.split_whitespace().map(|s| s.to_string()).collect());
-    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -h";
-    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
-    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./";
-    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
-    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ run --home $HOME";
-    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
-    // let args = "/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -r";
-    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
-    // let args = "/path0 -p 8080,8000,80_  /path1 -ka /path2 --user Loli,16,./ run -h";
-    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
-    // let args = "";
-    // fun_(args.split_whitespace().map(|s| s.to_string()).collect());
+    // fun_("/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ -h");
+    fun_("src/ -p 8080,8000,80  tests/ -ka examples/ --user Loli,16,./ .git run -hm $HOME -h");
+    // fun_("/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -h");
+    // fun_("src -p 8080,8000,80  /examples -ka /tests --user Loli,16,./");
+    // fun_("src -p 8080,8000,80 examples -ka tests --user Loli,16,./ run --home $HOME");
+    // fun_("src -p 8080,8000,80 examples -ka tests --user Loli,16,./ build -r");
+    // fun_("src -p 8080,8000,80 examples -ka tests --user Loli,16,./ build -r -v");
+    // fun_("src -p 8080,8000,80_  examples -ka tests --user Loli,16,./ run -h");
+    // fun_("");
 }
-fn fun_(args: Vec<String>) {
+fn fun_(args: &str) {
     let mut fht2p = Fht2p::default();
     println!("{:?}", fht2p);
+    println!("Args: {:?}", args);
+    let args: Vec<String> = args.split_whitespace().map(|s| s.to_string()).collect();
     {
         let mut app = App::new("fht2p")
             .version("0.1.0")
@@ -45,7 +40,7 @@ fn fun_(args: Vec<String>) {
                      .short("u")
                      .long("user")
                      .help("Sets user information"))
-            .args("Paths", &mut fht2p.routes)
+            .args("Dirs", &mut fht2p.routes)
             .args_check(args_checker)
             .current_cmd(&mut fht2p.sub_cmd)
             .cmd(Cmd::new("run")

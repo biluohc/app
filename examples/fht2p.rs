@@ -26,7 +26,7 @@ fn fun() {
                      .short("u")
                      .long("user")
                      .help("Sets user information"))
-            .args("Paths", &mut fht2p.routes)
+            .args("Dirs", &mut fht2p.routes)
             .args_check(args_checker)
             .current_cmd(&mut fht2p.sub_cmd)
             .cmd(Cmd::new("run")
