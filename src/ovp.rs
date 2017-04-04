@@ -1,6 +1,15 @@
-/// ## You can use custom `OptValue` by `impl` it
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::fmt::Debug;
+
+/// **`OptValue`**
+#[derive(Debug)]
+pub struct OptValue<'app> {
+    pub inner: Box<OptValueParse<'app> + 'app>,
+}
+
+/// **You can use custom `OptValue` by `impl` it**
 ///
-/// ### Explain
+/// ### **Explain**
 ///
 /// * `into_opt_value(self)` convert it(`&mut T`)  to `OptValue`.
 ///
@@ -15,17 +24,17 @@
 ///     `String.is_empty()`, `Option<T>.is_none()`, `Vec<T>.is_empty()` in default `impl`
 ///
 ///     ```fuckrs
-///         --user user,-u user(Must)       Sets user information
+///         --user user,-u user(Must)       sets user information
 ///     ```
 ///
 ///
 /// * `parse(&mut self, opt_name: String, msg: &str)` maintains the value, and return message by `Result<(),String>`.
 ///
-///   `opt_name` is current `Opt`'s name, `msg` is `&str` need to pasre.
+///   `opt_name` is current `Opt`'s name, `msg` is the `&str` need to pasre.
 ///
 /// * `check(&self, opt_name: &str)` check value  and return message by `Result<(),String>`.
 ///
-/// ### Suggestion
+/// ### **Suggestion**
 ///
 /// * `T` is suitable for options with default values.
 ///
@@ -47,16 +56,6 @@
 /// ",80,," -> vec[80]
 /// "8080,8000,80," -> Vec[8080,8000,80]
 /// ```
-
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
-use std::fmt::Debug;
-
-/// `OptValue` struct
-#[derive(Debug)]
-pub struct OptValue<'app> {
-    pub inner: Box<OptValueParse<'app> + 'app>,
-}
-
 pub trait OptValueParse<'app>: Debug {
     fn into_opt_value(self) -> OptValue<'app>;
     fn is_bool(&self) -> bool;
@@ -144,7 +143,7 @@ macro_rules! add_impl {
     fn parse(&mut self, opt_name : String, msg: &str) -> Result<(), String> {
         **self = msg.parse::<$t>()
                 .map_err(|_| format!("OPTION({}) parse<{}> fails: \"{}\"", opt_name, stringify!($t),msg))?;
-                Ok(())
+        Ok(())
     }
     fn check(&self, _ :  &str) -> Result<(), String> {
         Ok(())

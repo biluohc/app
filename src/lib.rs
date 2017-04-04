@@ -9,13 +9,13 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "^0.4.2"
+//!  app = "^0.5.0"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.4.2" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.5.0" }
 //! ```
 //!
 //! ## Examples
@@ -29,6 +29,8 @@ mod ovp;
 pub use ovp::{OptValue, OptValueParse};
 
 use std::collections::BTreeMap as Map;
+use std::fmt::{self, Display};
+use std::default::Default;
 use std::process::exit;
 use std::env;
 
@@ -37,29 +39,173 @@ static mut HELP_SUBCMD: bool = false;
 static mut VERSION: bool = false;
 const MUST: &'static str = "(Must)";
 
-/// application struct
+/// **Application**
 #[derive(Debug,Default)]
 pub struct App<'app> {
-    name: &'app str,
-    version: &'app str,
-    authors: Vec<(&'app str, &'app str)>, // (name,email)
-    addrs: Vec<(&'app str, &'app str)>, // (addr_name,addr)
+    //commands
+    main: Cmd<'app>,
+    current_cmd: Option<&'app mut Option<String>>, //main is None
+    sub_cmds: Map<Option<String>, Cmd<'app>>, // name,_
+    helper: Helper,
+}
+
+/// **`Helper`**
+#[derive(Debug,Default)]
+pub struct Helper {
+    // info
+    name: String,
+    version: String,
+    authors: Vec<(String, String)>, // (name,email)
+    addrs: Vec<(String, String)>, // (addr_name,addr)
+    desc: String,
     // env_vars
     current_exe: Option<String>,
     current_dir: Option<String>,
     home_dir: Option<String>,
     temp_dir: String,
-    //commands
-    main: Cmd<'app>,
-    current_cmd: Option<&'app mut String>, //main is None
-    sub_cmds: Map<String, Cmd<'app>>, // name,_
+    //  current_cmd
+    current_cmd: Option<String>, //main is None
+    // -v/--version, -h/--help
+    ver: String, // "name version"
+    helps: Map<Option<String>, String>, // None is main
+}
+
+impl Helper {
+    /// name
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+    /// version
+    pub fn version(&self) -> &String {
+        &self.version
+    }
+    /// description
+    pub fn desc(&self) -> &String {
+        &self.desc
+    }
+    /// name, email
+    pub fn authors(&self) -> &Vec<(String, String)> {
+        &self.authors
+    }
+    /// url_name, url
+    pub fn addrs(&self) -> &Vec<(String, String)> {
+        &self.addrs
+    }
+}
+
+impl Helper {
+    pub fn current_cmd(&self) -> Option<&String> {
+        self.current_cmd.as_ref()
+    }
+    pub fn current_cmd_str(&self) -> Option<&str> {
+        self.current_cmd.as_ref().map(|s| s.as_str())
+    }
+    pub fn current_cmd_ref(&self) -> &Option<String> {
+        &self.current_cmd
+    }
+    pub fn current_exe(&self) -> Option<&String> {
+        self.current_exe.as_ref()
+    }
+    pub fn current_dir(&self) -> Option<&String> {
+        self.current_dir.as_ref()
+    }
+    pub fn home_dir(&self) -> Option<&String> {
+        self.home_dir.as_ref()
+    }
+    pub fn temp_dir(&self) -> &String {
+        &self.temp_dir
+    }
+}
+
+impl Helper {
+    /// `format!("{}  {}", self.name(), self.version())`
+    pub fn ver(&self) -> &String {
+        &self.ver
+    }
+    /// print ver(`self.ver`) message and exit with the `status`
+    pub fn ver_exit(&self, status: i32) {
+        println!("{}", self.ver().trim());
+        exit(status);
+    }
+    /// `format!("ERROR:\n  {}\n\n", error)`
+    pub fn err<E>(&self, error: E) -> String
+        where E: AsRef<str> + Display
+    {
+        format!("ERROR:\n  {}\n\n", error)
+    }
+    /// print error(`self.err(error)`) message to `stderr` and exit with the `status`
+    pub fn err_exit<E>(&self, error: E, status: i32)
+        where E: AsRef<str> + Display
+    {
+        errln!("{}", self.err(error).trim());
+        exit(status);
+    }
+    /// all Command's help message(`main` and `sub_cmd`)
+    pub fn helps(&self) -> &Map<Option<String>, String> {
+        &self.helps
+    }
+    /// main's help mesage
+    pub fn help(&self) -> &String {
+        &self.helps[&None]
+    }
+    /// print main's help message and exit with the `status`
+    pub fn help_exit(&self, status: i32) {
+        println!("{}", self.help().trim());
+        exit(status);
+    }
+    /// `self.err(error) + self.help()`
+    pub fn help_err<E>(&self, error: E) -> String
+        where E: AsRef<str> + Display
+    {
+        self.err(error) + &self.helps[&None]
+    }
+    /// print error and help message(`self.help_err(error)`) to `stderr` and exit with the `status`
+    pub fn help_err_exit<E>(&self, error: E, status: i32)
+        where E: AsRef<str> + Display
+    {
+        errln!("{}", self.help_err(error).trim());
+        exit(status);
+    }
+    /// get sub_command's help message
+    pub fn help_cmd(&self, cmd_name: &Option<String>) -> &String {
+        &self.helps[cmd_name]
+    }
+    /// print sub_command's help message and exit with the `status`
+    pub fn help_cmd_exit(&self, cmd_name: &Option<String>, status: i32) {
+        println!("{}", &self.helps[cmd_name].trim());
+        exit(status);
+    }
+    /// `self.err(error) + self.help_cmd(cmd_name)`
+    pub fn help_cmd_err<E>(&self, cmd_name: &Option<String>, error: E) -> String
+        where E: AsRef<str> + Display
+    {
+        self.err(error) + &self.helps[cmd_name]
+    }
+    /// print error and sub_command's help message to `stderr`,s exit with the `status`
+    pub fn help_cmd_err_exit<E>(&self, cmd_name: &Option<String>, error: E, status: i32)
+        where E: AsRef<str> + Display
+    {
+        errln!("{}", &self.help_cmd_err(cmd_name, error).trim());
+        exit(status);
+    }
+    fn init_ver(&mut self, ver: String) {
+        self.ver = ver;
+    }
+    fn init_help(&mut self, cmd_name: Option<String>, help: String) {
+        if let Some(_) = self.helps.insert(cmd_name.clone(), help) {
+            panic!("{:?}'s help already insert", cmd_name);
+        }
+    }
 }
 
 impl<'app> App<'app> {
-    pub fn new<'s: 'app>(name: &'s str) -> Self {
+    /// name
+    pub fn new<S>(name: S) -> Self
+        where S: Into<String>
+    {
         init!();
         let mut app = Self::default();
-        app.name = name;
+        app.helper.name = name.into();
         app = unsafe {
             app.opt(Opt::new("help", &mut HELP)
                         .short("h")
@@ -74,26 +220,39 @@ impl<'app> App<'app> {
         };
         app
     }
-    pub fn version<'s: 'app>(mut self, version: &'s str) -> Self {
-        self.version = version;
+    /// version
+    pub fn version<S>(mut self, version: S) -> Self
+        where S: Into<String>
+    {
+        self.helper.version = version.into();
         self
     }
+    /// discription
     pub fn desc<'s: 'app>(mut self, desc: &'s str) -> Self {
+        self.helper.desc = desc.to_string();
         self.main.desc = desc;
         self
     }
-    pub fn author<'s: 'app>(mut self, name: &'s str, email: &'s str) -> Self {
-        self.authors.push((name, email));
+    /// name, email
+    pub fn author<S>(mut self, name: S, email: S) -> Self
+        where S: Into<String>
+    {
+        self.helper.authors.push((name.into(), email.into()));
         self
     }
-    pub fn addr<'s: 'app>(mut self, name: &'s str, url: &'s str) -> Self {
-        self.addrs.push((name, url));
+    /// url_name, url
+    pub fn addr<S>(mut self, name: S, url: S) -> Self
+        where S: Into<String>
+    {
+        self.helper.addrs.push((name.into(), url.into()));
         self
     }
+    /// add a `Opt`
     pub fn opt(mut self, opt: Opt<'app>) -> Self {
         self.main = self.main.opt(opt);
         self
     }
+    /// get arguments, `App` will update the value
     pub fn args<'s: 'app, S>(mut self, name: S, value: &'s mut Vec<String>) -> Self
         where S: Into<String>
     {
@@ -101,10 +260,12 @@ impl<'app> App<'app> {
         self.main.args_name = name.into();
         self
     }
-    pub fn args_check<Checker: StringsChecker>(mut self, checker: Checker) -> Self {
+    /// give a function let `App` to check Arguments
+    pub fn args_check<Checker: StringsCheck>(mut self, checker: Checker) -> Self {
         self.main.args_check = checker.into_strings_check();
         self
     }
+    /// add a sub_command
     pub fn cmd(mut self, mut cmd: Cmd<'app>) -> Self {
         let name = cmd.name.to_string();
         cmd = unsafe {
@@ -113,79 +274,86 @@ impl<'app> App<'app> {
                         .long("help")
                         .help("show the help message"))
         };
-        if self.sub_cmds.insert(name.clone(), cmd).is_some() {
+        if self.sub_cmds.insert(Some(name.clone()), cmd).is_some() {
             panic!("sub_command: \"{}\" already defined", name);
-        }
-        if self.current_cmd.is_none() {
-            panic!("current_cmd's value no defined");
         }
         self
     }
-    pub fn current_cmd<'s: 'app>(mut self, value: &'s mut String) -> Self {
+    #[doc(hidden)]
+    pub fn current_cmd<'s: 'app>(mut self, value: &'s mut Option<String>) -> Self {
         self.current_cmd = Some(value);
         self
     }
 }
 impl<'app> App<'app> {
-    /// `parse_string(std::env::args()[1..])` and `exit(1)` if parse fails.
-    pub fn parse(&mut self) {
+    /// `parse(std::env::args()[1..])` and `exit(1)` if parse fails.
+    pub fn parse_args(self) -> Helper {
         let mut args = env::args();
         args.next();
         let args: Vec<String> = args.collect();
+        self.parse(&args[..])
+    }
+    /// `parse(&[String])` and `exit(1)` if parse fails.
+    pub fn parse(mut self, args: &[String]) -> Helper {
         if let Err(e) = self.parse_strings(args) {
             if e == String::new() {
-                exit(0);
+                panic!("App::parse_strings()->Err(String::new())");
             }
-            errln!("ERROR:\n  {}\n", e);
-            if self.current_cmd_get().is_some() && self.current_cmd_get() != Some(&mut String::new()) {
-                if let Some(ref s) = self.current_cmd_get() {
-                    self.help_cmd(s);
-                }
-            } else {
-                self.help();
-            }
-            exit(1);
+            self.helper
+                .help_cmd_err_exit(self.helper.current_cmd_ref(), e, 1);
         }
+        self.into_helper()
     }
-    pub fn parse_strings(&mut self, args: Vec<String>) -> Result<(), String> {
+    fn parse_strings(&mut self, args: &[String]) -> Result<(), String> {
         dbstln!("args: {:?}", args);
-        self.current_exe = env::current_exe()
+        {
+            let ver = self.ver();
+            self.helper.init_ver(ver);
+            let help = self.help();
+            self.helper.init_help(None, help);
+        }
+        for sub_cmd_name in self.sub_cmds.keys() {
+            let help = self.help_cmd(sub_cmd_name);
+            self.helper.init_help(sub_cmd_name.clone(), help);
+        }
+        self.helper.current_exe = env::current_exe()
             .map(|s| s.to_string_lossy().into_owned())
             .ok();
-        self.current_dir = env::current_dir()
+        self.helper.current_dir = env::current_dir()
             .map(|s| s.to_string_lossy().into_owned())
             .ok();
-        self.home_dir = env::home_dir().map(|s| s.to_string_lossy().into_owned());
-        self.temp_dir = env::temp_dir().to_string_lossy().into_owned();
-        let commands: Vec<String> = self.sub_cmds.keys().map(|s| s.to_string()).collect();
-        let (mut idx, mut sub_cmd_name) = (std::usize::MAX, "");
-        'out: for i in 0..args.len() {
-            for cmd in &commands {
-                if args[i] == **cmd {
-                    idx = i;
-                    sub_cmd_name = args[i].as_str();
-                    break 'out;
+        self.helper.home_dir = env::home_dir().map(|s| s.to_string_lossy().into_owned());
+        self.helper.temp_dir = env::temp_dir().to_string_lossy().into_owned();
+        let mut idx = std::usize::MAX;
+        {
+            let commands: Vec<&Option<String>> = self.sub_cmds.keys().collect();
+            'out: for i in 0..args.len() {
+                for cmd in &commands {
+                    let arg = Some(args[i].clone());
+                    if arg == **cmd {
+                        idx = i;
+                        self.helper.current_cmd = arg;
+                        break 'out;
+                    }
                 }
             }
         }
         if let Some(ref mut s) = self.current_cmd {
-            s.clear();
-            s.push_str(sub_cmd_name);
+            **s = self.helper.current_cmd().cloned();
         }
         // -h/--help
         if let Some(s) = strings_idx(&args[..], "-h", "--help") {
             if idx != std::usize::MAX && idx < s {
-                self.help_cmd(sub_cmd_name);
+                self.helper
+                    .help_cmd_exit(self.helper.current_cmd_ref(), 0);
             } else {
-                self.help();
+                self.helper.help_exit(0);
             }
-            return Err(String::new());
         }
         // -v/--version
         if let Some(s) = strings_idx(&args[..], "-v", "--version") {
             if idx >= s {
-                self.ver();
-                return Err(String::new());
+                self.helper.ver_exit(0);
             }
         }
         fn strings_idx(ss: &[String], msg0: &str, msg1: &str) -> Option<usize> {
@@ -199,7 +367,7 @@ impl<'app> App<'app> {
         if idx != std::usize::MAX {
             self.main.parse(&args[0..idx])?;
             self.sub_cmds
-                .get_mut(sub_cmd_name)
+                .get_mut(self.helper.current_cmd_ref())
                 .unwrap()
                 .parse(&args[idx + 1..])?;
         } else {
@@ -216,8 +384,10 @@ impl<'app> App<'app> {
             opt.value.inner.check(opt.name_get())?;
         }
         // check current_cmd
-        if sub_cmd_name != "" {
-            let cmd = self.sub_cmds.get(sub_cmd_name).unwrap();
+        if self.helper.current_cmd().is_some() {
+            let cmd = self.sub_cmds
+                .get_mut(self.helper.current_cmd_ref())
+                .unwrap();
             if let Some(ref s) = cmd.args {
                 if s.is_empty() {
                     return Err(format!("Arguments({}) missing", cmd.args_name));
@@ -241,22 +411,26 @@ impl<'app> App<'app> {
                 .args_check
                 .call(&s[..], &self.main.args_name)?;
         }
-        if sub_cmd_name != "" {
-            let cmd = self.sub_cmds.get(sub_cmd_name).unwrap();
+        if self.helper.current_cmd().is_some() {
+            let cmd = self.sub_cmds
+                .get_mut(self.helper.current_cmd_ref())
+                .unwrap();
             if let Some(ref s) = cmd.args {
                 cmd.args_check.call(&s[..], &cmd.args_name)?;
             }
         }
         Ok(())
     }
-    fn ver(&self) {
-        println!("{}  {}", self.name.trim(), self.version.trim());
+    fn ver(&self) -> String {
+        format!("{}  {}",
+                self.helper.name.trim(),
+                self.helper.version.trim())
     }
-    // NAME
-    fn help_name(&self) -> String {
-        format!("NAME:\n  {} - {}\n  {}\n",
-                self.name.trim(),
-                self.version.trim(),
+    // INFO
+    fn help_info(&self) -> String {
+        format!("INFO:\n  {} - {}\n  {}\n",
+                self.helper.name.trim(),
+                self.helper.version.trim(),
                 self.main.desc.trim())
     }
     fn help_global_opt(&self) -> String {
@@ -299,24 +473,24 @@ impl<'app> App<'app> {
         }
         help
     }
-    pub fn help(&self) {
-        // NAME
-        let mut help = self.help_name();
+    fn help(&self) -> String {
+        // INFO
+        let mut help = self.help_info();
         //Author
-        if !self.authors.is_empty() {
+        if !self.helper.authors.is_empty() {
             help += &{
                          let mut authors = String::new() + "\nAUTHOR:\n";
-                         for &(author, email) in &self.authors {
+                         for &(ref author, ref email) in &self.helper.authors {
                              authors += &format!("  {} <{}>\n", author, email);
                          }
                          authors
                      };
         }
         //ADDRESS
-        if !self.addrs.is_empty() {
+        if !self.helper.addrs.is_empty() {
             help += &{
                          let mut authors = String::new() + "\nADDRESS:\n";
-                         for &(author, email) in &self.addrs {
+                         for &(ref author, ref email) in &self.helper.addrs {
                              authors += &format!("  {}: {}\n", author, email);
                          }
                          authors
@@ -325,7 +499,7 @@ impl<'app> App<'app> {
         //USAGE
         //    zipcs [global options] [global arguments] command [command options] [arguments...]
         help += &{
-                     let mut tmp = format!("\nUSAGE:\n  {}", self.name);
+                     let mut tmp = format!("\nUSAGE:\n  {}", self.helper.name);
                      if !self.main.opts.is_empty() {
                          tmp += " [global options]";
                      }
@@ -346,7 +520,7 @@ impl<'app> App<'app> {
                          let mut vs: Vec<(String, &str)> = Vec::new();
                          let mut len = 0;
                          for (k, v) in &self.sub_cmds {
-                             let tmp_ = format!("    {}  ", k);
+                             let tmp_ = format!("    {}  ", k.as_ref().unwrap());
                              if tmp_.len() > len {
                                  len = tmp_.len();
                              }
@@ -362,15 +536,15 @@ impl<'app> App<'app> {
                          tmp
                      };
         }
-        println!("{}", help.trim());
+        help
     }
-    pub fn help_cmd(&self, sub_cmd_name: &str) {
-        // NAME
-        let mut help = self.help_name();
+    fn help_cmd(&self, sub_cmd_name: &Option<String>) -> String {
+        // INFO
+        let mut help = self.help_info();
         //USAGE
         //    zipcs [global options] [global arguments] command [command options] [arguments...]
         help += &{
-                     let mut tmp = format!("\nUSAGE:\n  {}", self.name);
+                     let mut tmp = format!("\nUSAGE:\n  {}", self.helper.name);
                      if !self.main.opts.is_empty() {
                          tmp += " [global options]";
                      }
@@ -427,30 +601,17 @@ impl<'app> App<'app> {
                          tmp
                      }
         }
-        println!("{}", help.trim());
+        help
     }
-    pub fn current_cmd_get(&self) -> Option<&str> {
-        if let Some(ref s) = self.current_cmd {
-            Some(s)
-        } else {
-            None
-        }
+    pub fn helper(&self) -> &Helper {
+        &self.helper
     }
-    pub fn current_exe(&self) -> Option<&String> {
-        self.current_exe.as_ref()
-    }
-    pub fn current_dir(&self) -> Option<&String> {
-        self.current_dir.as_ref()
-    }
-    pub fn home_dir(&self) -> Option<&String> {
-        self.home_dir.as_ref()
-    }
-    pub fn temp_dir(&self) -> &String {
-        &self.temp_dir
+    pub fn into_helper(self) -> Helper {
+        self.helper
     }
 }
 
-///Command strcut
+/// **Command**
 #[derive(Debug,Default)]
 pub struct Cmd<'app> {
     name: &'app str,
@@ -459,18 +620,21 @@ pub struct Cmd<'app> {
     str_to_name: Map<String, String>, //-short/--long to name
     args_name: String,
     args: Option<&'app mut Vec<String>>,
-    args_check: StringsCheck,
+    args_check: StringsChecker,
 }
 impl<'app> Cmd<'app> {
+    /// name
     pub fn new<'s: 'app>(name: &'s str) -> Self {
         let mut c = Self::default();
         c.name = name;
         c
     }
+    /// description
     pub fn desc<'s: 'app>(mut self, desc: &'s str) -> Self {
         self.desc = desc;
         self
     }
+    /// get arguments
     pub fn args<'s: 'app, S>(mut self, name: S, value: &'s mut Vec<String>) -> Self
         where S: Into<String>
     {
@@ -478,10 +642,11 @@ impl<'app> Cmd<'app> {
         self.args_name = name.into();
         self
     }
-    pub fn args_check<Checker: StringsChecker>(mut self, checker: Checker) -> Self {
+    pub fn args_check<Checker: StringsCheck>(mut self, checker: Checker) -> Self {
         self.args_check = checker.into_strings_check();
         self
     }
+    /// add `Opt`
     pub fn opt(mut self, opt: Opt<'app>) -> Self {
         let long = opt.long_get();
         let short = opt.short_get();
@@ -568,46 +733,7 @@ impl<'app> Cmd<'app> {
     }
 }
 
-/// Closures checks Arguments and returns message
-///
-/// `&[String]` is the Arguments, `&str` is current_cmd's name, `main`s cmd_name is `""`.
-pub struct StringsCheck {
-    pub fn_: Box<Fn(&[String], &str) -> Result<(), String>>,
-}
-
-use std::default::Default;
-fn strings_checker_default(_: &[String], _: &str) -> Result<(), String> {
-    Ok(())
-}
-impl Default for StringsCheck {
-    fn default() -> StringsCheck {
-        StringsCheck { fn_: Box::new(strings_checker_default) }
-    }
-}
-
-use std::fmt;
-impl fmt::Debug for StringsCheck {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("StringsCheck {{ fn_: _ }}")
-    }
-}
-
-impl StringsCheck {
-    pub fn call(&self, msg: &[String], args_name: &str) -> Result<(), String> {
-        (*self.fn_)(msg, args_name)
-    }
-}
-pub trait StringsChecker {
-    fn into_strings_check(self) -> StringsCheck;
-}
-
-impl<F: Fn(&[String], &str) -> Result<(), String> + 'static> StringsChecker for F {
-    fn into_strings_check(self) -> StringsCheck {
-        StringsCheck { fn_: Box::from(self) }
-    }
-}
-
-/// Option struct
+/// **Option**
 #[derive(Debug)]
 pub struct Opt<'app> {
     name: &'app str,
@@ -617,6 +743,23 @@ pub struct Opt<'app> {
     help: &'app str,
 }
 impl<'app> Opt<'app> {
+    ///**name and value, `App` will maintain the value(`&mut T`).**
+    ///
+    ///for example,
+    ///
+    ///* follows's charset is `Opt`'s Name
+    ///
+    ///* h, v and cs is `Opt`'s short
+    ///
+    ///* help, version and charset is `Opt`'s long
+    ///
+    ///* help is `Opt`'s help message
+    ///
+    ///```frs
+    ///--charset charset,-cs charset         sets the charset Zipcs using
+    ///--help,-h                             show the help message
+    ///--version,-v                          show the version message
+    ///```
     pub fn new<'s: 'app, V>(name: &'app str, value: V) -> Self
         where V: OptValueParse<'app>
     {
@@ -628,14 +771,17 @@ impl<'app> Opt<'app> {
             help: "",
         }
     }
+    /// short
     pub fn short(mut self, short: &'app str) -> Self {
         self.short = Some(short);
         self
     }
+    /// long
     pub fn long(mut self, long: &'app str) -> Self {
         self.long = Some(long);
         self
     }
+    /// help message
     pub fn help(mut self, help: &'app str) -> Self {
         self.help = help;
         self
@@ -661,5 +807,44 @@ impl<'app> Opt<'app> {
     }
     pub fn help_get(&self) -> &str {
         self.help
+    }
+}
+
+/// **ArgumentsCheck**
+///
+/// `&[String]` is the Arguments, args_name is args's name
+pub struct StringsChecker {
+    pub fn_: Box<Fn(&[String], &str) -> Result<(), String>>,
+}
+
+fn strings_checker_default(_: &[String], _: &str) -> Result<(), String> {
+    Ok(())
+}
+impl Default for StringsChecker {
+    fn default() -> StringsChecker {
+        StringsChecker { fn_: Box::new(strings_checker_default) }
+    }
+}
+
+impl fmt::Debug for StringsChecker {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("StringsCheck {{ fn_: _ }}")
+    }
+}
+
+impl StringsChecker {
+    pub fn call(&self, msg: &[String], args_name: &str) -> Result<(), String> {
+        (*self.fn_)(msg, args_name)
+    }
+}
+
+/// **You could check arguments and returns error message by a closure**
+pub trait StringsCheck {
+    fn into_strings_check(self) -> StringsChecker;
+}
+
+impl<F: Fn(&[String], &str) -> Result<(), String> + 'static> StringsCheck for F {
+    fn into_strings_check(self) -> StringsChecker {
+        StringsChecker { fn_: Box::from(self) }
     }
 }

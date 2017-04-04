@@ -7,13 +7,13 @@ Cargo.toml
 
 ```toml
     [dependencies]  
-    app = "^0.4.2" 
+    app = "^0.5.0" 
 ```
 ## Or 
 
 ```toml
     [dependencies]  
-    app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.4.2" }
+    app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.5.0" }
 ```
 
 ## Documentation  
