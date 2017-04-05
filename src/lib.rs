@@ -9,13 +9,13 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "^0.5.0"
+//!  app = "^0.5.1"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.5.0" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.5.1" }
 //! ```
 //!
 //! ## Examples
@@ -37,7 +37,6 @@ use std::env;
 static mut HELP: bool = false;
 static mut HELP_SUBCMD: bool = false;
 static mut VERSION: bool = false;
-const MUST: &'static str = "(Must)";
 
 /// **Application**
 #[derive(Debug,Default)]
@@ -442,19 +441,23 @@ impl<'app> App<'app> {
                          let mut vs: Vec<(String, &str)> = Vec::new();
                          let mut len = 0;
                          for (k, v) in &self.main.opts {
-                             let must = if v.value.inner.is_must() { MUST } else { "" };
+                             let mut default = String::new();
+                             if !v.value.inner.is_bool() && !v.value.inner.is_must() {
+                                 default = format!("[{}]", v.value.inner.str());
+                             };
+                             dbstln!("GLOBAL--{}: {} -> {}", k, v.value.inner.is_must(), default);
                              let s = v.short_get().unwrap_or_else(String::new);
                              let long = v.long_get().unwrap_or_else(String::new);
                              let tmp_ = if v.is_bool() {
                                  if s != "" && long != "" {
-                                     format!("   {},{}{}  ", long, s, must)
+                                     format!("   {}, {}  ", s, long)
                                  } else {
-                                     format!("   {}{}{}  ", long, s, must)
+                                     format!("   {}{}  ", long, s)
                                  }
                              } else if s != "" && long != "" {
-                        format!("   {} {},{} {}{}  ", long, k, s, k, must)
+                        format!("   {}, {} <{}>{}  ", s, long, k, default)
                     } else {
-                        format!("   {}{} {}{}  ", s, long, k, must)
+                        format!("   {}{} <{}>{}  ", s, long, k, default)
                     };
                              if tmp_.len() > len {
                                  len = tmp_.len();
@@ -572,19 +575,23 @@ impl<'app> App<'app> {
                          let mut vs: Vec<(String, &str)> = Vec::new();
                          let mut len = 0;
                          for (k, v) in &cmd.opts {
-                             let must = if v.value.inner.is_must() { MUST } else { "" };
+                             let mut default = String::new();
+                             if !v.value.inner.is_bool() && !v.value.inner.is_must() {
+                                 default = format!("[{}]", v.value.inner.str());
+                             };
+                             dbstln!("CMD--{}: {} -> {}", k, v.value.inner.is_must(), default);
                              let s = v.short_get().unwrap_or_else(String::new);
                              let long = v.long_get().unwrap_or_else(String::new);
                              let tmp_ = if v.is_bool() {
                                  if s != "" && long != "" {
-                                     format!("    {},{}{}  ", long, s, must)
+                                     format!("    {}, {}  ", s, long)
                                  } else {
-                                     format!("    {}{}{}  ", long, s, must)
+                                     format!("    {}{}  ", s, long)
                                  }
                              } else if s != "" && long != "" {
-                        format!("    {} {},{} {}{}  ", long, k, s, k, must)
+                        format!("    {}, {} <{}>{}  ", s, long, k, default)
                     } else {
-                        format!("    {}{} {}{}  ", s, long, k, must)
+                        format!("    {}{} <{}>{}  ", s, long, k, default)
                     };
                              if tmp_.len() > len {
                                  len = tmp_.len();
@@ -737,7 +744,7 @@ impl<'app> Cmd<'app> {
 #[derive(Debug)]
 pub struct Opt<'app> {
     name: &'app str,
-    value: OptValue<'app>,
+    pub value: OptValue<'app>,
     short: Option<&'app str>,
     long: Option<&'app str>,
     help: &'app str,

@@ -8,6 +8,7 @@ fn main() {
 }
 fn fun() {
     let mut fht2p = Fht2p::default();
+    fht2p.ports.push(8080);
     println!("{:?}", fht2p);
     let helper = {
         App::new("fht2p")
@@ -109,6 +110,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut User {
     }
     fn is_must(&self) -> bool {
         true
+    }
+    fn str(&self)->String {
+        format!("{},{},{}",self.name,self.age,self.address)
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         self.name.clear();

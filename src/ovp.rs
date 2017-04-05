@@ -60,6 +60,7 @@ pub trait OptValueParse<'app>: Debug {
     fn into_opt_value(self) -> OptValue<'app>;
     fn is_bool(&self) -> bool;
     fn is_must(&self) -> bool;
+    fn str(&self) -> String;
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String>;
     fn check(&self, opt_name: &str) -> Result<(), String>;
 }
@@ -73,6 +74,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut bool {
     }
     fn is_must(&self) -> bool {
         false
+    }
+    fn str(&self) -> String {
+        format!("{}", self)
     }
     fn parse(&mut self, _: String, _: &str) -> Result<(), String> {
         **self = true;
@@ -91,6 +95,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut String {
     }
     fn is_must(&self) -> bool {
         self.is_empty()
+    }
+    fn str(&self) -> String {
+        (**self).to_string()
     }
     fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
         **self = msg.to_string();
@@ -114,6 +121,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut char {
     }
     fn is_must(&self) -> bool {
         false
+    }
+    fn str(&self) -> String {
+        self.to_string()
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         if msg.len() == 1 {
@@ -139,7 +149,10 @@ macro_rules! add_impl {
     }
     fn is_must(&self) -> bool {
         false
-    }   
+    }
+    fn str(&self) -> String {
+       format!("{}",self)
+    }
     fn parse(&mut self, opt_name : String, msg: &str) -> Result<(), String> {
         **self = msg.parse::<$t>()
                 .map_err(|_| format!("OPTION({}) parse<{}> fails: \"{}\"", opt_name, stringify!($t),msg))?;
@@ -164,6 +177,11 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<char> {
     }
     fn is_must(&self) -> bool {
         self.is_none()
+    }
+    fn str(&self) -> String {
+        self.as_ref()
+            .map(|ref s| (**s).to_string())
+            .unwrap_or_else(String::new)
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         if msg.len() == 1 {
@@ -192,6 +210,11 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<String> {
     fn is_must(&self) -> bool {
         self.is_none()
     }
+    fn str(&self) -> String {
+        self.as_ref()
+            .map(|ref s| (**s).to_string())
+            .unwrap_or_else(String::new)
+    }
     fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
         **self = Some(msg.to_string());
         Ok(())
@@ -216,6 +239,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<$t> {
     }
     fn is_must(&self) -> bool {
         self.is_none()
+    }
+    fn str(&self) -> String {
+        self.as_ref().map(|ref s|format!("{}",s)).unwrap_or_else(String::new)
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         **self = Some(msg.parse::<$t>()
@@ -251,6 +277,11 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<char> {
     fn is_must(&self) -> bool {
         self.is_empty()
     }
+    fn str(&self) -> String {
+        let mut str = String::new();
+        self.as_slice().iter().map(|s| str.push(*s)).count();
+        str
+    }
     fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
         self.clear();
         for c in msg.chars() {
@@ -272,6 +303,18 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<String> {
     }
     fn is_must(&self) -> bool {
         self.is_empty()
+    }
+    fn str(&self) -> String {
+        let mut str = String::new();
+        self.as_slice()
+            .iter()
+            .map(|s| {
+                     str.push_str(s);
+                     str.push(',');
+                 })
+            .count();
+        str.pop();
+        str
     }
     fn parse(&mut self, _: String, msg: &str) -> Result<(), String> {
         self.clear(); // What due to ?
@@ -300,6 +343,14 @@ macro_rules! add_vec_impl {
     }
     fn is_must(&self) -> bool {
         self.is_empty()
+    }
+    fn str(&self) -> String {
+        let mut str = String::new();
+        self.as_slice()
+            .iter()
+            .map(|s| str.push_str(&format!("{},",s))).count();
+        str.pop();
+        str
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
                 self.clear();

@@ -1,18 +1,20 @@
 [package]
 name = "app"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["biluohc <biluohc@qq.com>"]
 description = "A easy-to-use command-line-parser."
 
 repository = "https://github.com/biluohc/app-rs"
 documentation = "https://docs.rs/app/"
 readme = "readme.md"
-keywords = ["command","argument","parser","easy-to-use","command-line-parser"]
+categories = ["command-line-interface"]
+keywords = ["command","argument","parser","command-line","command-line-parser"]
 license = "MIT"
 
 [dependencies]
 stderr ="0.7.0"
+# term = "0.2" # color
 
 [[test]]
 name ="fht2p"
-path="tests/main.rs"
+path="tests/main.rs" 
