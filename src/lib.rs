@@ -9,13 +9,13 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "^0.5.2"
+//!  app = "^0.5.3"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.5.2" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.5.3" }
 //! ```
 //!
 //! ## Examples
@@ -25,15 +25,18 @@
 #[macro_use]
 extern crate stderr;
 use stderr::Loger;
+extern crate term;
 mod ovp;
 pub use ovp::{OptValue, OptValueParse};
 
 use std::collections::BTreeMap as Map;
 use std::fmt::{self, Display};
 use std::default::Default;
+use std::io::prelude::*;
 use std::process::exit;
 use std::env;
 
+const ERROR_LINE_NUM: usize = 1; // for print error with color(Red)
 static mut HELP: bool = false;
 static mut HELP_SUBCMD: bool = false;
 static mut VERSION: bool = false;
@@ -136,8 +139,22 @@ impl Helper {
     pub fn err_exit<E>(&self, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        errln!("{}", self.err(error).trim());
+        self.err_line_print(&self.err(error),ERROR_LINE_NUM);
         exit(status);
+    }
+    /// print error message line(2) with Red color(fg)
+    #[inline]
+    pub fn err_line_print(&self, msg: &str, line_num: usize) {
+        for (i, line) in msg.trim().lines().enumerate() {
+            if i == line_num {
+                let mut t = term::stderr().unwrap();
+                t.fg(term::color::RED).unwrap();
+                writeln!(t, "{}", line).unwrap();
+                t.reset().unwrap();
+            } else {
+                errln!("{}", line);
+            }
+        }
     }
     /// all Command's help message(`main` and `sub_cmd`)
     pub fn helps(&self) -> &Map<Option<String>, String> {
@@ -162,7 +179,7 @@ impl Helper {
     pub fn help_err_exit<E>(&self, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        errln!("{}", self.help_err(error).trim());
+        self.err_line_print(&self.help_err(error),ERROR_LINE_NUM);
         exit(status);
     }
     /// get sub_command's help message
@@ -184,7 +201,7 @@ impl Helper {
     pub fn help_cmd_err_exit<E>(&self, cmd_name: &Option<String>, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        errln!("{}", &self.help_cmd_err(cmd_name, error).trim());
+        self.err_line_print(&self.help_cmd_err(cmd_name, error),ERROR_LINE_NUM);
         exit(status);
     }
     fn init_ver(&mut self, ver: String) {
