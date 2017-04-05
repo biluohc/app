@@ -18,6 +18,9 @@ fn fun_(args: &str) {
     let args: Vec<String> = args.split_whitespace().map(|s| s.to_string()).collect();
     let mut fht2p = Fht2p::default();
     let mut cmd: Option<String> = None;
+    fht2p.user.name = "Loli".to_string();
+    fht2p.user.age = 16;
+    fht2p.user.address = "./".to_string();
     println!("{:?}", fht2p);
     let helper = {
         App::new("fht2p")
@@ -30,7 +33,7 @@ fn fun_(args: &str) {
                      .short("ka")
                      .long("keep-alive")
                      .help("open keep-alive"))
-            .opt(Opt::new("port", &mut fht2p.ports)
+            .opt(Opt::new("ports", &mut fht2p.ports)
                      .short("p")
                      .long("port")
                      .help("Sets listenning port"))
@@ -39,8 +42,9 @@ fn fun_(args: &str) {
                      .long("user")
                      .help("Sets user information"))
             .args("Dirs", &mut fht2p.dirs)
-            .args_check(args_checker)
+            .args_help("Sets the paths to share")
             .current_cmd(&mut cmd)
+            .args_check(args_checker)
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
                      .opt(Opt::new("home", &mut fht2p.run.home)
@@ -55,7 +59,9 @@ fn fun_(args: &str) {
                      .opt(Opt::new("release", &mut fht2p.build.release)
                               .short("r")
                               .long("release")
-                              .help("Build artifacts in release mode, with optimizations")))
+                              .help("Build artifacts in release mode, with optimizations"))
+                     .args("Files", &mut fht2p.build.files)
+                     .args_help("Files to build"))
             .parse(&args[..])
     };
     println!("{:?}_{:?}", cmd, helper.current_cmd_ref().clone());

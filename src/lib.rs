@@ -9,13 +9,13 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "^0.5.1"
+//!  app = "^0.5.2"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.5.1" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.5.2" }
 //! ```
 //!
 //! ## Examples
@@ -259,6 +259,11 @@ impl<'app> App<'app> {
         self.main.args_name = name.into();
         self
     }
+    /// arguments's help message
+    pub fn args_help<'s: 'app>(mut self, help: &'s str) -> Self {
+        self.main.args_help = help;
+        self
+    }
     /// give a function let `App` to check Arguments
     pub fn args_check<Checker: StringsCheck>(mut self, checker: Checker) -> Self {
         self.main.args_check = checker.into_strings_check();
@@ -380,7 +385,7 @@ impl<'app> App<'app> {
         }
         // check main.opts
         for (_, opt) in &self.main.opts {
-            opt.value.inner.check(opt.name_get())?;
+            opt.value.as_ref().check(opt.name_get())?;
         }
         // check current_cmd
         if self.helper.current_cmd().is_some() {
@@ -393,7 +398,7 @@ impl<'app> App<'app> {
                 }
             }
             for (_, opt) in &cmd.opts {
-                opt.value.inner.check(opt.name_get())?;
+                opt.value.as_ref().check(opt.name_get())?;
             }
         }
         // No Args
@@ -441,11 +446,12 @@ impl<'app> App<'app> {
                          let mut vs: Vec<(String, &str)> = Vec::new();
                          let mut len = 0;
                          for (k, v) in &self.main.opts {
-                             let mut default = String::new();
-                             if !v.value.inner.is_bool() && !v.value.inner.is_must() {
-                                 default = format!("[{}]", v.value.inner.str());
-                             };
-                             dbstln!("GLOBAL--{}: {} -> {}", k, v.value.inner.is_must(), default);
+                             let default = v.value
+                                 .as_ref()
+                                 .default()
+                                 .map(|s| format!("[{}]", s))
+                                 .unwrap_or_else(String::new);
+                             dbstln!("GLOBAL--{}:  {:?}", k, default);
                              let s = v.short_get().unwrap_or_else(String::new);
                              let long = v.long_get().unwrap_or_else(String::new);
                              let tmp_ = if v.is_bool() {
@@ -475,6 +481,38 @@ impl<'app> App<'app> {
                      }
         }
         help
+    }
+    fn help_args(&self) -> String {
+        let tmp_raw = "\nARGS:\n";
+        let mut tmp = tmp_raw.to_string();
+        let mut vs: Vec<(String, &str)> = Vec::new();
+        let mut len = 0;
+        if !self.main.args_help.is_empty() {
+            let tmp_main = format!("   <{}>  ", self.main.args_name);
+            len = tmp_main.len();
+            vs.push((tmp_main, self.main.args_help))
+        }
+        for (_, v) in &self.sub_cmds {
+            if !v.args_help.is_empty() {
+                let tmp_ = format!("   <{}>  ", v.args_name);
+                if tmp_.len() > len {
+                    len = tmp_.len();
+                }
+                vs.push((tmp_, v.args_help));
+            }
+        }
+        for (k, v) in vs {
+            let mut tmp_ = k.clone();
+            for _ in tmp_.len()..len {
+                tmp_.push(' ');
+            }
+            tmp += &format!("{}  {}\n", tmp_, v.trim());
+        }
+        if tmp.as_str() == tmp_raw {
+            String::new()
+        } else {
+            tmp
+        }
     }
     fn help(&self) -> String {
         // INFO
@@ -539,6 +577,8 @@ impl<'app> App<'app> {
                          tmp
                      };
         }
+        // args_help
+        help += &self.help_args();
         help
     }
     fn help_cmd(&self, sub_cmd_name: &Option<String>) -> String {
@@ -575,11 +615,12 @@ impl<'app> App<'app> {
                          let mut vs: Vec<(String, &str)> = Vec::new();
                          let mut len = 0;
                          for (k, v) in &cmd.opts {
-                             let mut default = String::new();
-                             if !v.value.inner.is_bool() && !v.value.inner.is_must() {
-                                 default = format!("[{}]", v.value.inner.str());
-                             };
-                             dbstln!("CMD--{}: {} -> {}", k, v.value.inner.is_must(), default);
+                             let default = v.value
+                                 .as_ref()
+                                 .default()
+                                 .map(|s| format!("[{}]", s))
+                                 .unwrap_or_else(String::new);
+                             dbstln!("GLOBAL--{}:  {:?}", k, default);
                              let s = v.short_get().unwrap_or_else(String::new);
                              let long = v.long_get().unwrap_or_else(String::new);
                              let tmp_ = if v.is_bool() {
@@ -608,6 +649,8 @@ impl<'app> App<'app> {
                          tmp
                      }
         }
+        // args_help
+        help += &self.help_args();
         help
     }
     pub fn helper(&self) -> &Helper {
@@ -626,6 +669,7 @@ pub struct Cmd<'app> {
     opts: Map<String, Opt<'app>>,
     str_to_name: Map<String, String>, //-short/--long to name
     args_name: String,
+    args_help: &'app str,
     args: Option<&'app mut Vec<String>>,
     args_check: StringsChecker,
 }
@@ -647,6 +691,11 @@ impl<'app> Cmd<'app> {
     {
         self.args = Some(value);
         self.args_name = name.into();
+        self
+    }
+    /// arguments's help message
+    pub fn args_help<'s: 'app>(mut self, help: &'s str) -> Self {
+        self.args_help = help;
         self
     }
     pub fn args_check<Checker: StringsCheck>(mut self, checker: Checker) -> Self {
@@ -744,7 +793,7 @@ impl<'app> Cmd<'app> {
 #[derive(Debug)]
 pub struct Opt<'app> {
     name: &'app str,
-    pub value: OptValue<'app>,
+    value: OptValue<'app>,
     short: Option<&'app str>,
     long: Option<&'app str>,
     help: &'app str,
@@ -795,13 +844,19 @@ impl<'app> Opt<'app> {
     }
     fn parse(&mut self, msg: &str) -> Result<(), String> {
         let name = self.name_get().to_string();
-        self.value.inner.parse(name, msg)
+        self.value.as_mut().parse(name, msg)
     }
 }
 
 impl<'app> Opt<'app> {
+    pub fn value(&self) -> &'app OptValue {
+        &self.value
+    }
+    pub fn value_mut(&mut self) -> &'app mut OptValue {
+        &mut self.value
+    }
     pub fn is_bool(&self) -> bool {
-        self.value.inner.is_bool()
+        self.value.as_ref().is_bool()
     }
     pub fn name_get(&self) -> &'app str {
         self.name

@@ -21,7 +21,7 @@ fn fun() {
                      .short("ka")
                      .long("keep-alive")
                      .help("open keep-alive"))
-            .opt(Opt::new("port", &mut fht2p.ports)
+            .opt(Opt::new("ports", &mut fht2p.ports)
                      .short("p")
                      .long("port")
                      .help("Sets listenning port"))
@@ -30,6 +30,7 @@ fn fun() {
                      .long("user")
                      .help("Sets user information"))
             .args("Dirs", &mut fht2p.dirs)
+            .args_help("Sets the paths to share")
             .args_check(args_checker)
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
@@ -45,7 +46,9 @@ fn fun() {
                      .opt(Opt::new("release", &mut fht2p.build.release)
                               .short("r")
                               .long("release")
-                              .help("Build artifacts in release mode, with optimizations")))
+                              .help("Build artifacts in release mode, with optimizations"))
+                     .args("Files", &mut fht2p.build.files)
+                     .args_help("Files to build"))
             .parse_args()
     };
     println!("Command: {:?}\n{:?}", helper.current_cmd_str(), fht2p);
@@ -90,6 +93,7 @@ struct Run {
 #[derive(Debug,Default)]
 struct Build {
     release: bool,
+    files: Vec<String>,
 }
 
 #[derive(Debug,Default)]
@@ -102,17 +106,18 @@ struct User {
 // Custom OptValue by impl OptValueParse
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut User {
     fn into_opt_value(self) -> OptValue<'app> {
-        OptValue { inner: Box::from(self) }
+        OptValue::new(Box::from(self))
     }
     // As --help/-h,they not have value follows it.
     fn is_bool(&self) -> bool {
         false
     }
-    fn is_must(&self) -> bool {
-        true
-    }
-    fn str(&self)->String {
-        format!("{},{},{}",self.name,self.age,self.address)
+    fn default(&self) -> Option<String> {
+        if self.name.is_empty() {
+            None
+        } else {
+            Some(format!("{},{},{}", self.name, self.age, self.address))
+        }
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         self.name.clear();
