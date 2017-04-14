@@ -11,14 +11,18 @@ impl<'app> OptValue<'app> {
     pub fn new(value: Box<OptValueParse<'app> + 'app>) -> Self {
         OptValue { inner: value }
     }
-    pub fn as_ref(&self) -> &Box<OptValueParse<'app> + 'app> {
+}
+
+impl<'app> AsRef<Box<OptValueParse<'app> + 'app>> for OptValue<'app> {
+    fn as_ref(&self) -> &Box<OptValueParse<'app> + 'app> {
         &self.inner
     }
-    pub fn as_mut(&mut self) -> &mut Box<OptValueParse<'app> + 'app> {
+}
+impl<'app> AsMut<Box<OptValueParse<'app> + 'app>> for OptValue<'app> {
+    fn as_mut(&mut self) -> &mut Box<OptValueParse<'app> + 'app> {
         &mut self.inner
     }
 }
-
 /// **You can use custom `OptValue` by `impl` it**
 ///
 /// ### **Explain**

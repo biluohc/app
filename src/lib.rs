@@ -9,13 +9,13 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "^0.5.3"
+//!  app = "0.5.4"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "^0.5.3" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "0.5.4" }
 //! ```
 //!
 //! ## Examples
@@ -40,6 +40,7 @@ const ERROR_LINE_NUM: usize = 1; // for print error with color(Red)
 static mut HELP: bool = false;
 static mut HELP_SUBCMD: bool = false;
 static mut VERSION: bool = false;
+static OPTIONAL: &'static str = "(optional)";
 
 /// **Application**
 #[derive(Debug,Default)]
@@ -139,7 +140,7 @@ impl Helper {
     pub fn err_exit<E>(&self, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.err(error),ERROR_LINE_NUM);
+        self.err_line_print(&self.err(error), ERROR_LINE_NUM);
         exit(status);
     }
     /// print error message line(2) with Red color(fg)
@@ -179,7 +180,7 @@ impl Helper {
     pub fn help_err_exit<E>(&self, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.help_err(error),ERROR_LINE_NUM);
+        self.err_line_print(&self.help_err(error), ERROR_LINE_NUM);
         exit(status);
     }
     /// get sub_command's help message
@@ -201,14 +202,14 @@ impl Helper {
     pub fn help_cmd_err_exit<E>(&self, cmd_name: &Option<String>, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.help_cmd_err(cmd_name, error),ERROR_LINE_NUM);
+        self.err_line_print(&self.help_cmd_err(cmd_name, error), ERROR_LINE_NUM);
         exit(status);
     }
     fn init_ver(&mut self, ver: String) {
         self.ver = ver;
     }
     fn init_help(&mut self, cmd_name: Option<String>, help: String) {
-        if let Some(_) = self.helps.insert(cmd_name.clone(), help) {
+        if self.helps.insert(cmd_name.clone(), help).is_some() {
             panic!("{:?}'s help already insert", cmd_name);
         }
     }
@@ -276,6 +277,13 @@ impl<'app> App<'app> {
         self.main.args_name = name.into();
         self
     }
+    /// set the `Cmd`s `args_optional` as `true`(default is `false`),
+    ///
+    /// `App` will will not check it's Args and create help message with tag of `optional` if it is `true`.
+    pub fn args_optional(mut self) -> Self {
+        self.main.args_optional = true;
+        self
+    }
     /// arguments's help message
     pub fn args_help<'s: 'app>(mut self, help: &'s str) -> Self {
         self.main.args_help = help;
@@ -309,9 +317,7 @@ impl<'app> App<'app> {
 impl<'app> App<'app> {
     /// `parse(std::env::args()[1..])` and `exit(1)` if parse fails.
     pub fn parse_args(self) -> Helper {
-        let mut args = env::args();
-        args.next();
-        let args: Vec<String> = args.collect();
+        let args: Vec<String> = env::args().skip(1).collect();
         self.parse(&args[..])
     }
     /// `parse(&[String])` and `exit(1)` if parse fails.
@@ -348,9 +354,9 @@ impl<'app> App<'app> {
         let mut idx = std::usize::MAX;
         {
             let commands: Vec<&Option<String>> = self.sub_cmds.keys().collect();
-            'out: for i in 0..args.len() {
+            'out: for (i, arg) in args.iter().enumerate() {
                 for cmd in &commands {
-                    let arg = Some(args[i].clone());
+                    let arg = Some(arg.to_string());
                     if arg == **cmd {
                         idx = i;
                         self.helper.current_cmd = arg;
@@ -378,8 +384,8 @@ impl<'app> App<'app> {
             }
         }
         fn strings_idx(ss: &[String], msg0: &str, msg1: &str) -> Option<usize> {
-            for idx in 0..ss.len() {
-                if ss[idx] == msg0 || ss[idx] == msg1 {
+            for (idx, arg) in ss.iter().enumerate() {
+                if arg == msg0 || arg == msg1 {
                     return Some(idx);
                 }
             }
@@ -396,13 +402,15 @@ impl<'app> App<'app> {
         }
         // check main.args
         if let Some(ref s) = self.main.args {
-            if s.is_empty() {
+            if !self.main.args_optional && s.is_empty() {
                 return Err(format!("Arguments({}) missing", self.main.args_name));
             }
         }
         // check main.opts
-        for (_, opt) in &self.main.opts {
-            opt.value.as_ref().check(opt.name_get())?;
+        for opt in self.main.opts.values() {
+            if !opt.is_optional() {
+                opt.value.as_ref().check(opt.name_get())?;
+            }
         }
         // check current_cmd
         if self.helper.current_cmd().is_some() {
@@ -410,15 +418,17 @@ impl<'app> App<'app> {
                 .get_mut(self.helper.current_cmd_ref())
                 .unwrap();
             if let Some(ref s) = cmd.args {
-                if s.is_empty() {
+                if !cmd.args_optional && s.is_empty() {
                     return Err(format!("Arguments({}) missing", cmd.args_name));
                 }
             }
-            for (_, opt) in &cmd.opts {
-                opt.value.as_ref().check(opt.name_get())?;
+            for opt in cmd.opts.values() {
+                if !opt.is_optional() {
+                    opt.value.as_ref().check(opt.name_get())?;
+                }
             }
         }
-        // No Args
+        // No input Args
         if args.is_empty() && self.main.args.is_none() {
             if self.sub_cmds.is_empty() {
                 return Err("OPTION missing".to_owned());
@@ -427,17 +437,21 @@ impl<'app> App<'app> {
             }
         }
         // Args checker
-        if let Some(ref s) = self.main.args {
-            self.main
-                .args_check
-                .call(&s[..], &self.main.args_name)?;
+        if !self.main.args_optional {
+            if let Some(ref s) = self.main.args {
+                self.main
+                    .args_check
+                    .call(&s[..], &self.main.args_name)?;
+            }
         }
         if self.helper.current_cmd().is_some() {
             let cmd = self.sub_cmds
                 .get_mut(self.helper.current_cmd_ref())
                 .unwrap();
-            if let Some(ref s) = cmd.args {
-                cmd.args_check.call(&s[..], &cmd.args_name)?;
+            if !cmd.args_optional {
+                if let Some(ref s) = cmd.args {
+                    cmd.args_check.call(&s[..], &cmd.args_name)?;
+                }
             }
         }
         Ok(())
@@ -463,12 +477,16 @@ impl<'app> App<'app> {
                          let mut vs: Vec<(String, &str)> = Vec::new();
                          let mut len = 0;
                          for (k, v) in &self.main.opts {
-                             let default = v.value
-                                 .as_ref()
-                                 .default()
-                                 .map(|s| format!("[{}]", s))
-                                 .unwrap_or_else(String::new);
-                             dbstln!("GLOBAL--{}:  {:?}", k, default);
+                             let default_or_optional = if v.is_optional() {
+                                 OPTIONAL.to_owned()
+                             } else {
+                                 v.value
+                                     .as_ref()
+                                     .default()
+                                     .map(|s| format!("[{}]", s))
+                                     .unwrap_or_else(String::new)
+                             };
+                             dbstln!("GLOBAL--{}:  {:?}", k, default_or_optional);
                              let s = v.short_get().unwrap_or_else(String::new);
                              let long = v.long_get().unwrap_or_else(String::new);
                              let tmp_ = if v.is_bool() {
@@ -478,9 +496,9 @@ impl<'app> App<'app> {
                                      format!("   {}{}  ", long, s)
                                  }
                              } else if s != "" && long != "" {
-                        format!("   {}, {} <{}>{}  ", s, long, k, default)
+                        format!("   {}, {} <{}>{}  ", s, long, k, default_or_optional)
                     } else {
-                        format!("   {}{} <{}>{}  ", s, long, k, default)
+                        format!("   {}{} <{}>{}  ", s, long, k, default_or_optional)
                     };
                              if tmp_.len() > len {
                                  len = tmp_.len();
@@ -505,13 +523,23 @@ impl<'app> App<'app> {
         let mut vs: Vec<(String, &str)> = Vec::new();
         let mut len = 0;
         if !self.main.args_help.is_empty() {
-            let tmp_main = format!("   <{}>  ", self.main.args_name);
+            let optional = if self.main.args_optional {
+                OPTIONAL.to_owned()
+            } else {
+                String::new()
+            };
+            let tmp_main = format!("   <{}>{}  ", self.main.args_name, optional);
             len = tmp_main.len();
             vs.push((tmp_main, self.main.args_help))
         }
-        for (_, v) in &self.sub_cmds {
+        for v in self.sub_cmds.values() {
             if !v.args_help.is_empty() {
-                let tmp_ = format!("   <{}>  ", v.args_name);
+                let optional = if self.main.args_optional {
+                    OPTIONAL.to_owned()
+                } else {
+                    String::new()
+                };
+                let tmp_ = format!("   <{}>{}  ", v.args_name, optional);
                 if tmp_.len() > len {
                     len = tmp_.len();
                 }
@@ -625,19 +653,23 @@ impl<'app> App<'app> {
         // GLOBAL OPTIONS:
         help += &self.help_global_opt();
         // SubCMD OPTIONS
-        let cmd = self.sub_cmds.get(sub_cmd_name).unwrap();
+        let cmd = &self.sub_cmds[sub_cmd_name];
         if !cmd.opts.is_empty() {
             help += &{
                          let mut tmp = "\nOPTIONS:\n".to_owned();
                          let mut vs: Vec<(String, &str)> = Vec::new();
                          let mut len = 0;
                          for (k, v) in &cmd.opts {
-                             let default = v.value
-                                 .as_ref()
-                                 .default()
-                                 .map(|s| format!("[{}]", s))
-                                 .unwrap_or_else(String::new);
-                             dbstln!("GLOBAL--{}:  {:?}", k, default);
+                             let default_or_optional = if v.is_optional() {
+                                 OPTIONAL.to_owned()
+                             } else {
+                                 v.value
+                                     .as_ref()
+                                     .default()
+                                     .map(|s| format!("[{}]", s))
+                                     .unwrap_or_else(String::new)
+                             };
+                             dbstln!("CMD_{:?}--{}:  {:?}", sub_cmd_name, k, default_or_optional);
                              let s = v.short_get().unwrap_or_else(String::new);
                              let long = v.long_get().unwrap_or_else(String::new);
                              let tmp_ = if v.is_bool() {
@@ -647,9 +679,9 @@ impl<'app> App<'app> {
                                      format!("    {}{}  ", s, long)
                                  }
                              } else if s != "" && long != "" {
-                        format!("    {}, {} <{}>{}  ", s, long, k, default)
+                        format!("    {}, {} <{}>{}  ", s, long, k, default_or_optional)
                     } else {
-                        format!("    {}{} <{}>{}  ", s, long, k, default)
+                        format!("    {}{} <{}>{}  ", s, long, k, default_or_optional)
                     };
                              if tmp_.len() > len {
                                  len = tmp_.len();
@@ -688,6 +720,7 @@ pub struct Cmd<'app> {
     args_name: String,
     args_help: &'app str,
     args: Option<&'app mut Vec<String>>,
+    args_optional: bool,
     args_check: StringsChecker,
 }
 impl<'app> Cmd<'app> {
@@ -708,6 +741,13 @@ impl<'app> Cmd<'app> {
     {
         self.args = Some(value);
         self.args_name = name.into();
+        self
+    }
+    /// set the `Cmd`s `args_optional` as `true`(default is `false`),
+    ///
+    /// `App` will will not check it's Args and create help message with tag of `optional` if it is `true`.
+    pub fn args_optional(mut self) -> Self {
+        self.args_optional = true;
         self
     }
     /// arguments's help message
@@ -811,6 +851,7 @@ impl<'app> Cmd<'app> {
 pub struct Opt<'app> {
     name: &'app str,
     value: OptValue<'app>,
+    optional: bool,
     short: Option<&'app str>,
     long: Option<&'app str>,
     help: &'app str,
@@ -839,10 +880,18 @@ impl<'app> Opt<'app> {
         Opt {
             value: value.into_opt_value(),
             name: name,
+            optional: false,
             short: None,
             long: None,
             help: "",
         }
+    }
+    /// set `Opt`s optional as `true`(default is `false`),
+    ///
+    /// `App` will will not check it's value and create help message without default's value if it is `true`.
+    pub fn optional(mut self) -> Self {
+        self.optional = true;
+        self
     }
     /// short
     pub fn short(mut self, short: &'app str) -> Self {
@@ -872,6 +921,9 @@ impl<'app> Opt<'app> {
     pub fn value_mut(&mut self) -> &'app mut OptValue {
         &mut self.value
     }
+    pub fn is_optional(&self) -> bool {
+        self.optional
+    }
     pub fn is_bool(&self) -> bool {
         self.value.as_ref().is_bool()
     }
@@ -889,9 +941,9 @@ impl<'app> Opt<'app> {
     }
 }
 
-/// **ArgumentsCheck**
+/// **`ArgumentsCheck`**
 ///
-/// `&[String]` is the Arguments, args_name is args's name
+/// `&[String]` is the Arguments, `args_name` is args's name
 pub struct StringsChecker {
     pub fn_: Box<Fn(&[String], &str) -> Result<(), String>>,
 }

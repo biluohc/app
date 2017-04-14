@@ -18,7 +18,7 @@ fn fun() {
             .author("Xyz.org", "moz@mio.org")
             .addr("GitHub", "https://biluohc.github.com/fht2p")
             .opt(Opt::new("keep-alive", &mut fht2p.keep_alive)
-                     .short("ka")
+                     .short("k")
                      .long("keep-alive")
                      .help("open keep-alive"))
             .opt(Opt::new("ports", &mut fht2p.ports)
