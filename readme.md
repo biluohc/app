@@ -22,7 +22,7 @@ or
 * Run `cargo doc --open` after modified the toml file.
 
 ## Examples
-* [fht2p](https://github.com/biluohc/app-rs/blob/master/examples/fht2p.rs)
+* Options and Arguments: [fht2p](https://github.com/biluohc/app-rs/blob/master/examples/fht2p.rs)
 ```
     git clone https://github.com/biluohc/app-rs
     cd app-rs
@@ -30,7 +30,7 @@ or
 ```
 
 
-* [zipcs](https://github.com/biluohc/zipcs)
+* Sub_Commands: [zipcs](https://github.com/biluohc/zipcs)
 ```
     git clone https://github.com/biluohc/zipcs
     cd zipcs

@@ -14,8 +14,8 @@ license = "MIT"
 [dependencies]
 stderr ="0.7.0"
 term = "0.2" # color
-avp = {path = "vps/avp"}
-ovp = {path = "vps/ovp"}
+avp = {path = "vps/avp", version = "0.1.0"}
+ovp = {path = "vps/ovp", version = "0.1.0"}
 
 [[test]]
 name ="fht2p"

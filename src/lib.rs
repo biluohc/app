@@ -123,6 +123,10 @@ impl Helper {
 }
 
 impl Helper {
+    /// exit with the `status`
+    pub fn exit(&self, status: i32) {
+        exit(status);
+    }
     /// `format!("{}  {}", self.name(), self.version())`
     pub fn ver(&self) -> &String {
         &self.ver

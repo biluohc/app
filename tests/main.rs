@@ -1,20 +1,21 @@
-include!("../examples/fht2p.rs");
+extern crate app;
+use app::{App, Opt, Cmd, OptValue, OptValueParse};
 
 // cargo t -- --nocapture
 #[test]
-fn main_() {
-    // fun_("/path0 -p 8080,8000,80  /path1 -k /path2 --user Loli,16,./ -h");
-    // fun_("src/ -p 8080,8000,80  tests/ -k examples/ --user Loli,16,./ .git run -home $HOME -h");
-    // fun_("/path0 -p 8080,8000,80  /path1 -k /path2 --user Loli,16,./ build -h");
-    // fun_("src -p 8080,8000,80 examples -k tests --user Loli,16,./");
-    fun_("src -p 8080,8000,80 examples -k tests"); // optional
-    // fun_("src -p 8080,8000,80 examples -k tests --user Loli,16,./ run --home $HOME");
-    // fun_("src -p 8080,8000,80 examples -k tests --user Loli,16,./ build -r");
-    // fun_("src -p 8080,8000,80 examples -k tests --user Loli,16,./ build -r -v");
-    // fun_("src -p 8080,8000,80_  examples -k tests --user Loli,16,./ run -h");
-    // fun_("");
+fn main() {
+    // fun("/path0 -p 8080,8000,80  /path1 -k /path2 --user Loli,16,./ -h");
+    // fun("src/ -p 8080,8000,80  tests/ -k examples/ --user Loli,16,./ .git run -home $HOME -h");
+    // fun("/path0 -p 8080,8000,80  /path1 -k /path2 --user Loli,16,./ build -h");
+    // fun("src -p 8080,8000,80 examples -k tests --user Loli,16,./");
+    fun("src -p 8080,8000,80 examples -k tests"); // optional
+    // fun("src -p 8080,8000,80 examples -k tests --user Loli,16,./ run --home $HOME");
+    // fun("src -p 8080,8000,80 examples -k tests --user Loli,16,./ build -r");
+    // fun("src -p 8080,8000,80 examples -k tests --user Loli,16,./ build -r -v");
+    // fun("src -p 8080,8000,80_  examples -k tests --user Loli,16,./ run -h");
+    // fun("");
 }
-fn fun_(args: &str) {
+fn fun(args: &str) {
     println!("Args: {:?}", args);
     let args: Vec<String> = args.split_whitespace().map(|s| s.to_string()).collect();
     let mut fht2p = Fht2p::default();
@@ -86,5 +87,73 @@ fn fun_(args: &str) {
         println!("----------------------app {:?}--------------------\n{}",
                  k,
                  v.trim());
+    }
+}
+
+#[derive(Debug,Default)]
+struct Fht2p {
+    ports: Vec<u32>,
+    keep_alive: bool,
+    dirs: Vec<String>,
+    user: User,
+    run: Run,
+    build: Build,
+}
+
+#[derive(Debug,Default)]
+struct Run {
+    home: String,
+    log: bool,
+}
+
+#[derive(Debug,Default)]
+struct Build {
+    release: bool,
+    files: Vec<String>,
+}
+
+#[derive(Debug,Default)]
+struct User {
+    name: String,
+    age: u8,
+    address: String,
+}
+
+// Custom OptValue by impl OptValueParse
+impl<'app, 's: 'app> OptValueParse<'app> for &'s mut User {
+    fn into(self) -> OptValue<'app> {
+        OptValue::new(Box::from(self))
+    }
+    // As --help/-h,they not have value follows it.
+    fn is_bool(&self) -> bool {
+        false
+    }
+    fn default(&self) -> Option<String> {
+        if self.name.is_empty() {
+            None
+        } else {
+            Some(format!("{},{},{}", self.name, self.age, self.address))
+        }
+    }
+    fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
+        self.name.clear();
+        self.address.clear();
+        let vs: Vec<&str> = msg.split(',').filter(|s| !s.is_empty()).collect();
+        if vs.len() != 3 {
+            return Err(format!("OPTION({}) parse<User> fails: \"{}\"", opt_name, msg));
+        }
+        self.name.push_str(vs[0]);
+        self.age = vs[1]
+            .parse::<u8>()
+            .map_err(|_| format!("OPTION({}) parse<User.age> fails: \"{}\"", opt_name, msg))?;
+        self.address.push_str(vs[2]);
+        Ok(())
+    }
+    fn check(&self, opt_name: &str) -> Result<(), String> {
+        if self.name.is_empty() {
+            Err(format!("OPTION({})'s value missing", opt_name))
+        } else {
+            Ok(())
+        }
     }
 }
