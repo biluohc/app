@@ -9,13 +9,13 @@
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = "0.5.4"
+//!  app = "0.5.5"
 //! ```
 //! or
 //!
 //! ```toml
 //!  [dependencies]
-//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "0.5.4" }
+//!  app = { git = "https://github.com/biluohc/app-rs",branch = "master", version = "0.5.5" }
 //! ```
 //!
 //! ## Examples
@@ -28,12 +28,14 @@ use stderr::Loger;
 extern crate term;
 mod ovp;
 pub use ovp::{OptValue, OptValueParse};
+mod avp;
+pub use avp::{ArgsValue, ArgsValueParse};
 
 use std::collections::BTreeMap as Map;
-use std::fmt::{self, Display};
 use std::default::Default;
 use std::io::prelude::*;
 use std::process::exit;
+use std::fmt::Display;
 use std::env;
 
 const ERROR_LINE_NUM: usize = 1; // for print error with color(Red)
@@ -270,10 +272,10 @@ impl<'app> App<'app> {
         self
     }
     /// get arguments, `App` will update the value
-    pub fn args<'s: 'app, S>(mut self, name: S, value: &'s mut Vec<String>) -> Self
-        where S: Into<String>
+    pub fn args<'s: 'app, V>(mut self, name: &'app str, value: V) -> Self
+        where V: ArgsValueParse<'app>
     {
-        self.main.args = Some(value);
+        self.main.args = Some(value.into());
         self.main.args_name = name.into();
         self
     }
@@ -287,11 +289,6 @@ impl<'app> App<'app> {
     /// arguments's help message
     pub fn args_help<'s: 'app>(mut self, help: &'s str) -> Self {
         self.main.args_help = help;
-        self
-    }
-    /// give a function let `App` to check Arguments
-    pub fn args_check<Checker: StringsCheck>(mut self, checker: Checker) -> Self {
-        self.main.args_check = checker.into_strings_check();
         self
     }
     /// add a sub_command
@@ -402,8 +399,8 @@ impl<'app> App<'app> {
         }
         // check main.args
         if let Some(ref s) = self.main.args {
-            if !self.main.args_optional && s.is_empty() {
-                return Err(format!("Arguments({}) missing", self.main.args_name));
+            if !self.main.args_optional {
+                s.as_ref().check(&self.main.args_name)?;
             }
         }
         // check main.opts
@@ -418,8 +415,8 @@ impl<'app> App<'app> {
                 .get_mut(self.helper.current_cmd_ref())
                 .unwrap();
             if let Some(ref s) = cmd.args {
-                if !cmd.args_optional && s.is_empty() {
-                    return Err(format!("Arguments({}) missing", cmd.args_name));
+                if !cmd.args_optional {
+                    s.as_ref().check(&cmd.args_name)?;
                 }
             }
             for opt in cmd.opts.values() {
@@ -434,24 +431,6 @@ impl<'app> App<'app> {
                 return Err("OPTION missing".to_owned());
             } else {
                 return Err("OPTION/COMMAND missing".to_owned());
-            }
-        }
-        // Args checker
-        if !self.main.args_optional {
-            if let Some(ref s) = self.main.args {
-                self.main
-                    .args_check
-                    .call(&s[..], &self.main.args_name)?;
-            }
-        }
-        if self.helper.current_cmd().is_some() {
-            let cmd = self.sub_cmds
-                .get_mut(self.helper.current_cmd_ref())
-                .unwrap();
-            if !cmd.args_optional {
-                if let Some(ref s) = cmd.args {
-                    cmd.args_check.call(&s[..], &cmd.args_name)?;
-                }
             }
         }
         Ok(())
@@ -523,23 +502,34 @@ impl<'app> App<'app> {
         let mut vs: Vec<(String, &str)> = Vec::new();
         let mut len = 0;
         if !self.main.args_help.is_empty() {
-            let optional = if self.main.args_optional {
+            let default_or_optional = if self.main.args_optional {
                 OPTIONAL.to_owned()
             } else {
-                String::new()
+                self.main
+                    .args
+                    .as_ref()
+                    .unwrap()
+                    .as_ref()
+                    .default()
+                    .unwrap_or_else(String::new)
             };
-            let tmp_main = format!("   <{}>{}  ", self.main.args_name, optional);
+            let tmp_main = format!("   <{}>{}  ", self.main.args_name, default_or_optional);
             len = tmp_main.len();
             vs.push((tmp_main, self.main.args_help))
         }
         for v in self.sub_cmds.values() {
             if !v.args_help.is_empty() {
-                let optional = if self.main.args_optional {
+                let default_or_optional = if v.args_optional {
                     OPTIONAL.to_owned()
                 } else {
-                    String::new()
+                    v.args
+                        .as_ref()
+                        .unwrap()
+                        .as_ref()
+                        .default()
+                        .unwrap_or_else(String::new)
                 };
-                let tmp_ = format!("   <{}>{}  ", v.args_name, optional);
+                let tmp_ = format!("   <{}>{}  ", v.args_name, default_or_optional);
                 if tmp_.len() > len {
                     len = tmp_.len();
                 }
@@ -719,9 +709,8 @@ pub struct Cmd<'app> {
     str_to_name: Map<String, String>, //-short/--long to name
     args_name: String,
     args_help: &'app str,
-    args: Option<&'app mut Vec<String>>,
+    args: Option<ArgsValue<'app>>,
     args_optional: bool,
-    args_check: StringsChecker,
 }
 impl<'app> Cmd<'app> {
     /// name
@@ -736,10 +725,10 @@ impl<'app> Cmd<'app> {
         self
     }
     /// get arguments
-    pub fn args<'s: 'app, S>(mut self, name: S, value: &'s mut Vec<String>) -> Self
-        where S: Into<String>
+    pub fn args<'s: 'app, V>(mut self, name: &'app str, value: V) -> Self
+        where V: ArgsValueParse<'app>
     {
-        self.args = Some(value);
+        self.args = Some(value.into());
         self.args_name = name.into();
         self
     }
@@ -753,10 +742,6 @@ impl<'app> Cmd<'app> {
     /// arguments's help message
     pub fn args_help<'s: 'app>(mut self, help: &'s str) -> Self {
         self.args_help = help;
-        self
-    }
-    pub fn args_check<Checker: StringsCheck>(mut self, checker: Checker) -> Self {
-        self.args_check = checker.into_strings_check();
         self
     }
     /// add `Opt`
@@ -790,6 +775,7 @@ impl<'app> Cmd<'app> {
         self
     }
     fn parse(&mut self, args: &[String]) -> Result<(), String> {
+        let mut args_vec: Vec<String> = Vec::new();
         let mut i = 0;
         for _ in 0..args.len() {
             if i >= args.len() {
@@ -833,14 +819,19 @@ impl<'app> Cmd<'app> {
                     }
                 }
                 s => {
-                    if let Some(ref mut ss) = self.args {
-                        ss.push(s.to_string());
-                        i += 1;
-                    } else {
-                        return Err(format!("Argument: \"{}\" no need", s));
-                    }
+                    args_vec.push(s.to_string());
+                    i += 1;
                 }
             }
+        }
+        if !args_vec.is_empty() && self.args.is_some() {
+            self.args
+                .as_mut()
+                .unwrap()
+                .as_mut()
+                .parse(&self.args_name, &args_vec[..])?;
+        } else if !args_vec.is_empty() {
+            return Err(format!("Arguments: \"{:?}\" no need", args_vec));
         }
         Ok(())
     }
@@ -878,7 +869,7 @@ impl<'app> Opt<'app> {
         where V: OptValueParse<'app>
     {
         Opt {
-            value: value.into_opt_value(),
+            value: value.into(),
             name: name,
             optional: false,
             short: None,
@@ -938,44 +929,5 @@ impl<'app> Opt<'app> {
     }
     pub fn help_get(&self) -> &str {
         self.help
-    }
-}
-
-/// **`ArgumentsCheck`**
-///
-/// `&[String]` is the Arguments, `args_name` is args's name
-pub struct StringsChecker {
-    pub fn_: Box<Fn(&[String], &str) -> Result<(), String>>,
-}
-
-fn strings_checker_default(_: &[String], _: &str) -> Result<(), String> {
-    Ok(())
-}
-impl Default for StringsChecker {
-    fn default() -> StringsChecker {
-        StringsChecker { fn_: Box::new(strings_checker_default) }
-    }
-}
-
-impl fmt::Debug for StringsChecker {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("StringsCheck {{ fn_: _ }}")
-    }
-}
-
-impl StringsChecker {
-    pub fn call(&self, msg: &[String], args_name: &str) -> Result<(), String> {
-        (*self.fn_)(msg, args_name)
-    }
-}
-
-/// **You could check arguments and returns error message by a closure**
-pub trait StringsCheck {
-    fn into_strings_check(self) -> StringsChecker;
-}
-
-impl<F: Fn(&[String], &str) -> Result<(), String> + 'static> StringsCheck for F {
-    fn into_strings_check(self) -> StringsChecker {
-        StringsChecker { fn_: Box::from(self) }
     }
 }

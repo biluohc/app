@@ -27,7 +27,7 @@ impl<'app> AsMut<Box<OptValueParse<'app> + 'app>> for OptValue<'app> {
 ///
 /// ### **Explain**
 ///
-/// * `into_opt_value(self)` convert it(`&mut T`)  to `OptValue`.
+/// * `into(self)` convert it(`&mut T`)  to `OptValue`.
 ///
 ///
 /// * `is_bool(&self)` like `--help/-h`,they not have value follows it.
@@ -67,7 +67,7 @@ impl<'app> AsMut<Box<OptValueParse<'app> + 'app>> for OptValue<'app> {
 /// "8080,8000,80," -> Vec[8080,8000,80]
 /// ```
 pub trait OptValueParse<'app>: Debug {
-    fn into_opt_value(self) -> OptValue<'app>;
+    fn into(self) -> OptValue<'app>;
     fn is_bool(&self) -> bool;
     fn default(&self) -> Option<String>;
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String>;
@@ -75,7 +75,7 @@ pub trait OptValueParse<'app>: Debug {
 }
 
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut bool {
-    fn into_opt_value(self) -> OptValue<'app> {
+    fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
@@ -93,7 +93,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut bool {
     }
 }
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut String {
-    fn into_opt_value(self) -> OptValue<'app> {
+    fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
@@ -120,7 +120,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut String {
 }
 
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut char {
-    fn into_opt_value(self) -> OptValue<'app> {
+    fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
@@ -145,7 +145,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut char {
 macro_rules! add_impl {
     ($($t:ty)*) => ($(
         impl<'app, 's: 'app> OptValueParse<'app> for &'s mut $t {
-        fn into_opt_value(self) -> OptValue<'app> {
+        fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
@@ -170,7 +170,7 @@ add_impl! { usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 }
 add_impl! { IpAddr Ipv4Addr Ipv6Addr SocketAddr SocketAddrV4 SocketAddrV6 }
 
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<char> {
-    fn into_opt_value(self) -> OptValue<'app> {
+    fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
@@ -197,7 +197,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<char> {
 }
 
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<String> {
-    fn into_opt_value(self) -> OptValue<'app> {
+    fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
@@ -222,7 +222,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<String> {
 macro_rules! add_option_impl {
     ($($t:ty)*) => ($(
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<$t> {
-    fn into_opt_value(self) -> OptValue<'app> {
+    fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
@@ -256,7 +256,7 @@ add_option_impl! { bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 }
 add_option_impl! { IpAddr Ipv4Addr Ipv6Addr SocketAddr SocketAddrV4 SocketAddrV6 }
 
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<char> {
-    fn into_opt_value(self) -> OptValue<'app> {
+    fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
@@ -284,7 +284,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<char> {
 }
 
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<String> {
-    fn into_opt_value(self) -> OptValue<'app> {
+    fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {
@@ -325,7 +325,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<String> {
 macro_rules! add_vec_impl {
     ($($t:ty)*) => ($(
         impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<$t> {
-        fn into_opt_value(self) -> OptValue<'app> {
+        fn into(self) -> OptValue<'app> {
         OptValue { inner: Box::new(self) }
     }
     fn is_bool(&self) -> bool {

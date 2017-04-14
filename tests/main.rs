@@ -3,24 +3,23 @@ include!("../examples/fht2p.rs");
 // cargo t -- --nocapture
 #[test]
 fn main_() {
-    // fun_("/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ -h");
-    // fun_("src/ -p 8080,8000,80  tests/ -ka examples/ --user Loli,16,./ .git run -hm $HOME -h");
-    // fun_("/path0 -p 8080,8000,80  /path1 -ka /path2 --user Loli,16,./ build -h");
-    fun_("src -p 8080,8000,80 examples -ka tests --user Loli,16,./");
-    // fun_("src -p 8080,8000,80 examples -ka tests --user Loli,16,./ run --home $HOME");
-    // fun_("src -p 8080,8000,80 examples -ka tests --user Loli,16,./ build -r");
-    // fun_("src -p 8080,8000,80 examples -ka tests --user Loli,16,./ build -r -v");
-    // fun_("src -p 8080,8000,80_  examples -ka tests --user Loli,16,./ run -h");
+    // fun_("/path0 -p 8080,8000,80  /path1 -k /path2 --user Loli,16,./ -h");
+    // fun_("src/ -p 8080,8000,80  tests/ -k examples/ --user Loli,16,./ .git run -home $HOME -h");
+    // fun_("/path0 -p 8080,8000,80  /path1 -k /path2 --user Loli,16,./ build -h");
+    // fun_("src -p 8080,8000,80 examples -k tests --user Loli,16,./");
+    fun_("src -p 8080,8000,80 examples -k tests"); // optional
+    // fun_("src -p 8080,8000,80 examples -k tests --user Loli,16,./ run --home $HOME");
+    // fun_("src -p 8080,8000,80 examples -k tests --user Loli,16,./ build -r");
+    // fun_("src -p 8080,8000,80 examples -k tests --user Loli,16,./ build -r -v");
+    // fun_("src -p 8080,8000,80_  examples -k tests --user Loli,16,./ run -h");
     // fun_("");
 }
 fn fun_(args: &str) {
     println!("Args: {:?}", args);
     let args: Vec<String> = args.split_whitespace().map(|s| s.to_string()).collect();
     let mut fht2p = Fht2p::default();
+    fht2p.build.files.push("src/avp.rs".to_string());
     let mut cmd: Option<String> = None;
-    fht2p.user.name = "Loli".to_string();
-    fht2p.user.age = 16;
-    fht2p.user.address = "./".to_string();
     println!("{:?}", fht2p);
     let helper = {
         App::new("fht2p")
@@ -38,13 +37,14 @@ fn fun_(args: &str) {
                      .long("port")
                      .help("Sets listenning port"))
             .opt(Opt::new("user", &mut fht2p.user)
+                     .optional()
                      .short("u")
                      .long("user")
                      .help("Sets user information"))
             .args("Dirs", &mut fht2p.dirs)
             .args_help("Sets the paths to share")
+            .args_optional()
             .current_cmd(&mut cmd)
-            .args_check(args_checker)
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
                      .opt(Opt::new("home", &mut fht2p.run.home)
@@ -69,9 +69,15 @@ fn fun_(args: &str) {
 
     println!("{:?}", fht2p);
     match helper.current_cmd_str() {
-        None => {} //main
-        Some("run") => {}
-        Some("build") => {}        
+        None => {
+            println!("Command::running: main");
+        } //main
+        Some("run") => {
+            println!("Command::running: {:?}", helper.current_cmd_str());
+        }
+        Some("build") => {
+            println!("Command::running: {:?}", helper.current_cmd_str());
+        }   
         _ => unreachable!(),
     }
     println!("----------------------app -v/--version--------------------");

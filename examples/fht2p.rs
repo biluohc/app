@@ -1,8 +1,6 @@
 extern crate app;
 use app::{App, Opt, Cmd, OptValue, OptValueParse};
 
-use std::path::Path;
-
 fn main() {
     fun();
 }
@@ -31,7 +29,6 @@ fn fun() {
                      .help("Sets user information"))
             .args("Dirs", &mut fht2p.dirs)
             .args_help("Sets the paths to share")
-            .args_check(args_checker)
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
                      .opt(Opt::new("home", &mut fht2p.run.home)
@@ -65,14 +62,6 @@ fn fun() {
         _ => unreachable!(),
     }
 }
-fn args_checker(msg: &[String], args_name: &str) -> Result<(), String> {
-    for path in msg {
-        if !Path::new(path).is_dir() {
-            return Err(format!("Argument({}): \"{}\" is invalid", args_name, path));
-        }
-    }
-    Ok(())
-}
 
 #[derive(Debug,Default)]
 struct Fht2p {
@@ -105,7 +94,7 @@ struct User {
 
 // Custom OptValue by impl OptValueParse
 impl<'app, 's: 'app> OptValueParse<'app> for &'s mut User {
-    fn into_opt_value(self) -> OptValue<'app> {
+    fn into(self) -> OptValue<'app> {
         OptValue::new(Box::from(self))
     }
     // As --help/-h,they not have value follows it.
