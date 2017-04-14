@@ -26,9 +26,9 @@
 extern crate stderr;
 use stderr::Loger;
 extern crate term;
-extern crate ovp;
+mod ovp;
 pub use ovp::{OptValue, OptValueParse};
-extern crate avp;
+mod avp;
 pub use avp::{ArgsValue, ArgsValueParse};
 
 use std::collections::BTreeMap as Map;
