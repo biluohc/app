@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.5.5"
+version = "0.5.6"
 authors = ["biluohc <biluohc@qq.com>"]
 description = "A easy-to-use command-line-parser."
 
@@ -12,7 +12,8 @@ keywords = ["command","argument","parser","command-line","command-line-parser"]
 license = "MIT"
 
 [dependencies]
-stderr ="0.7.0"
+stderr ="0.7.1"
+# stderr = { git = "https://github.com/biluohc/stderr", branch = "master", version = "0.7.1"}
 term = "0.2" # color
 
 [[test]]
