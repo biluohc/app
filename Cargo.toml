@@ -4,12 +4,15 @@ version = "0.5.6"
 authors = ["biluohc <biluohc@qq.com>"]
 description = "A easy-to-use command-line-parser."
 
-repository = "https://github.com/biluohc/app-rs"
+repository = "https://github.com/biluohc/app"
 documentation = "https://docs.rs/app/"
 readme = "readme.md"
 categories = ["command-line-interface"]
 keywords = ["command","argument","parser","command-line","command-line-parser"]
 license = "MIT"
+
+[badges]
+travis-ci = { repository = "biluohc/app" }
 
 [dependencies]
 stderr ="0.7.1"

@@ -1,5 +1,5 @@
 
-//! # [app](https://github.com/biluohc/app-rs)
+//! # [app](https://github.com/biluohc/app)
 //!  A easy-to-use command-line-parser.
 //!
 
