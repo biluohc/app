@@ -19,7 +19,7 @@ Cargo.toml
 
 ```toml
     [dependencies]  
-    app = { git = "https://github.com/biluohc/app",branch = "master", version = "0.5.6" }
+    app = { git = "https://github.com/biluohc/app", branch = "master", version = "0.5.6" }
 ```
 
 ## Documentation  
