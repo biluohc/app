@@ -1,5 +1,5 @@
 extern crate app;
-use app::{App, Opt};
+use app::{App, Opt, Args};
 
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
@@ -44,9 +44,7 @@ impl Config {
                          .short("p")
                          .long("port")
                          .help("Sets listenning port"))
-                .args("PATHS", &mut config.paths)
-                .args_optional()
-                .args_help(r#"Sets the paths to share(default is "./")"#)
+                .args(Args::new("PATHS", &mut config.paths).help("Sets the paths to share"))
                 .parse_args()
         };
         if cp {
@@ -61,12 +59,13 @@ impl Config {
         config
             .check()
             .map_err(|e| helper.help_err_exit(e, 1))
-            .unwrap()
+            .unwrap() // map_err alrendy exit if it is err, so unwrap is safe.
+
     }
     fn check(self) -> Result<Self, String> {
         for path in &self.paths {
             if !path.as_path().exists() {
-                return Err(format!("Arguments(PATHS): {:?} is not exists", path));
+                return Err(format!("Args(PATHS): {:?} is not exists", path));
             }
         }
         Ok(self)

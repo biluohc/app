@@ -46,7 +46,6 @@ pub trait ArgsValueParse<'app>: Debug {
     fn check(&self, args_name: &str) -> Result<(), String>;
 }
 
-
 impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<String> {
     fn into(self) -> ArgsValue<'app> {
         ArgsValue { inner: Box::from(self) }
@@ -59,7 +58,9 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<String> {
         }
     }
     fn parse(&mut self, _: &str, msg: &[String]) -> Result<(), String> {
-        self.clear(); // What due to ?
+        if !msg.is_empty() {
+            self.clear();
+        }
         msg.iter()
             .filter(|s| !s.is_empty())
             .map(|s| self.push(s.to_string()))
@@ -68,7 +69,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<String> {
     }
     fn check(&self, args_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("Arguments({}) missing", args_name))
+            Err(format!("Args({}) missing", args_name))
         } else {
             Ok(())
         }
@@ -86,7 +87,9 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<PathBuf> {
         }
     }
     fn parse(&mut self, _: &str, msg: &[String]) -> Result<(), String> {
-        self.clear(); // What due to ?
+        if !msg.is_empty() {
+            self.clear();
+        }
         msg.iter()
             .filter(|s| !s.is_empty())
             .map(|s| self.push(PathBuf::from(s)))
@@ -95,7 +98,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<PathBuf> {
     }
     fn check(&self, args_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("Arguments({}) missing", args_name))
+            Err(format!("Args({}) missing", args_name))
         } else {
             Ok(())
         }
@@ -114,11 +117,13 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<char> {
         }
     }
     fn parse(&mut self, args_name: &str, msg: &[String]) -> Result<(), String> {
-        self.clear();
+        if !msg.is_empty() {
+            self.clear();
+        }
         for str in msg {
             let chars: Vec<char> = str.chars().collect();
             if chars.len() != 1 {
-                return Err(format!("Arguments({}): {:?} is invalid", args_name, str));
+                return Err(format!("Args({}): {:?} is invalid", args_name, str));
             } else {
                 self.push(chars[0]);
             }
@@ -127,7 +132,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<char> {
     }
     fn check(&self, args_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("Arguments({}) missing", args_name))
+            Err(format!("Args({}) missing", args_name))
         } else {
             Ok(())
         }
@@ -148,12 +153,12 @@ macro_rules! add_vec_impl {
         }
     }
     fn parse(&mut self, args_name: &str, msg: &[String]) -> Result<(), String> {
-                self.clear();
+        if !msg.is_empty(){ self.clear(); }
                 let vs: Vec<&String> = msg.iter().filter(|s| !s.trim().is_empty()).collect();
                 for str in &vs {
                     self.push(str.parse::<$t>()
                                .map_err(|_| {
-                                            format!("Arguments({}) parse<{}> fails: \"{}\"",
+                                            format!("Args({}) parse<{}> fails: \"{}\"",
                                                     args_name,
                                                     stringify!($t),
                                                     str)
@@ -163,7 +168,7 @@ macro_rules! add_vec_impl {
     }
     fn check(&self, args_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("Arguments({}) missing", args_name))
+            Err(format!("Args({}) missing", args_name))
         } else {
             Ok(())
         }

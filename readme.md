@@ -4,7 +4,7 @@
 [![Downloads of latest version](https://img.shields.io/crates/dv/app.svg)](https://crates.io/crates/app)
 [![Documentation](https://docs.rs/app/badge.svg)](https://docs.rs/app)
 
-# App
+# [app](https://github.com/biluohc/app)
 
 ## A easy-to-use command-line-parser written for Rust.
 
@@ -13,13 +13,13 @@ Cargo.toml
 
 ```toml
     [dependencies]  
-    app = "0.5.6" 
+    app = "0.6.0" 
 ```
 ## Or 
 
 ```toml
     [dependencies]  
-    app = { git = "https://github.com/biluohc/app",branch = "master", version = "0.5.6" }
+    app = { git = "https://github.com/biluohc/app",branch = "master", version = "0.6.0" }
 ```
 
 ## Documentation  
@@ -28,17 +28,23 @@ or
 * Run `cargo doc --open` after modified the toml file.
 
 ## Examples
-* Options and Arguments: [fht2p](https://github.com/biluohc/app/blob/master/examples/fht2p.rs)
-```
+* Options and Args: [fht2p](https://github.com/biluohc/app/blob/master/examples/fht2p.rs)
+```rustful
     git clone https://github.com/biluohc/app
-    cd app-rs
-    cargo run --example fht2p --release
+    cd app
+    cargo run --example fht2p -- -h
+```
+* MultiArgs: [cp](https://github.com/biluohc/app/blob/master/examples/cp.rs)
+```rustful
+    git clone https://github.com/biluohc/app
+    cd app
+    cargo run --example cp
 ```
 
+* Sub_`Commands`: [zipcs](https://github.com/biluohc/app/blob/master/examples/zipcs.rs)
+```rustful
+    git clone https://github.com/biluohc/app
+    cd app
+    cargo run --example zipcs
+```
 
-* Sub_Commands: [zipcs](https://github.com/biluohc/zipcs)
-```
-    git clone https://github.com/biluohc/zipcs
-    cd zipcs
-    cargo run --release
-```

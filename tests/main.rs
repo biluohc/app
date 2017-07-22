@@ -1,5 +1,5 @@
 extern crate app;
-use app::{App, Opt, Cmd, OptValue, OptValueParse};
+use app::{App, Opt, Args, Cmd, OptValue, OptValueParse};
 
 // cargo t -- --nocapture
 #[test]
@@ -8,9 +8,9 @@ fn main() {
     // fun("src/ -p 8080,8000,80  tests/ -k examples/ --user Loli,16,./ .git run -home $HOME -h");
     // fun("/path0 -p 8080,8000,80  /path1 -k /path2 --user Loli,16,./ build -h");
     // fun("src -p 8080,8000,80 examples -k tests --user Loli,16,./");
-    fun("src -p 8080,8000,80 examples -k tests"); // optional
+    // fun("src -p 8080,8000,80 examples -k tests"); // optional
     // fun("src -p 8080,8000,80 examples -k tests --user Loli,16,./ run --home $HOME");
-    // fun("src -p 8080,8000,80 examples -k tests --user Loli,16,./ build -r");
+    fun("src -p 8080,8000,80 examples -k tests --user Loli,16,./ build -r sec ssx");
     // fun("src -p 8080,8000,80 examples -k tests --user Loli,16,./ build -r -v");
     // fun("src -p 8080,8000,80_  examples -k tests --user Loli,16,./ run -h");
     // fun("");
@@ -19,8 +19,7 @@ fn fun(args: &str) {
     println!("Args: {:?}", args);
     let args: Vec<String> = args.split_whitespace().map(|s| s.to_string()).collect();
     let mut fht2p = Fht2p::default();
-    fht2p.build.files.push("src/avp.rs".to_string());
-    let mut cmd: Option<String> = None;
+    fht2p.build.files.push("src/main.rs".to_string());
     println!("{:?}", fht2p);
     let helper = {
         App::new("fht2p")
@@ -42,10 +41,9 @@ fn fun(args: &str) {
                      .short("u")
                      .long("user")
                      .help("Sets user information"))
-            .args("Dirs", &mut fht2p.dirs)
-            .args_help("Sets the paths to share")
-            .args_optional()
-            .current_cmd(&mut cmd)
+            .args(Args::new("PATHS", &mut fht2p.dirs)
+                      .optional()
+                      .help(r#"Sets the paths to share(default is "./")"#))
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
                      .opt(Opt::new("home", &mut fht2p.run.home)
@@ -61,12 +59,10 @@ fn fun(args: &str) {
                               .short("r")
                               .long("release")
                               .help("Build artifacts in release mode, with optimizations"))
-                     .args("Files", &mut fht2p.build.files)
-                     .args_help("Files to build"))
+                     .args(Args::new("Files", &mut fht2p.build.files).help("Files to build")))
             .parse(&args[..])
     };
-    println!("{:?}_{:?}", cmd, helper.current_cmd_ref().clone());
-    assert_eq!(cmd, helper.current_cmd_ref().clone());
+    println!("{:?}", helper.current_cmd_ref());
 
     println!("{:?}", fht2p);
     match helper.current_cmd_str() {
@@ -83,10 +79,10 @@ fn fun(args: &str) {
     }
     println!("----------------------app -v/--version--------------------");
     println!("{}", helper.ver().trim());
-    for (k, v) in helper.helps() {
+    for k in helper.helps.cmd_infos.keys() {
         println!("----------------------app {:?}--------------------\n{}",
                  k,
-                 v.trim());
+                 helper.help_cmd(k).trim());
     }
 }
 
