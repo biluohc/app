@@ -170,7 +170,7 @@ impl<'app> App<'app> {
 impl<'app> App<'app> {
     /// build `Helper` for custom `Helps`
     ///
-    /// You can modify `app.helper.helper.xxx`
+    /// You can modify `app.helper.helps.xxx`
     pub fn build_helper(mut self) -> Self {
         self._build_helper();
         self
@@ -421,44 +421,33 @@ fn args_handle(args: &mut [Args], argstr: &[String]) -> Result<(), String> {
         } else {
             0
         };
-        dbln!("Args_len/argstr_len/argstr_used_len/a_len: {}/{}/{}/{}",args.len(),argstr.len(),argstr_used_len,a_len);
-        if argstr_used_len==argstr.len() && a_len !=0 {
-            return Err(format!("Args({}) no provide", a.name_get()));            
-        }
-       else if argstr_used_len + a_len> argstr.len() {
-            return Err(format!("Args({}) no provide enough: {:?}", a.name_get(),&argstr[argstr_used_len..]));
+        dbln!("Args_len/argstr_len/argstr_used_len/a_len: {}/{}/{}/{}",
+              args.len(),
+              argstr.len(),
+              argstr_used_len,
+              a_len);
+        if argstr_used_len == argstr.len() && a_len != 0 {
+            dbln!("argstr_used_len == argstr.len() && a_len != 0");
+            return Err(format!("Args({}) no provide", a.name_get()));
+        } else if argstr_used_len + a_len > argstr.len() {
+            dbln!("argstr_used_len + a_len > argstr.len()");
+            return Err(format!("Args({}) no provide enough: {:?}",
+                               a.name_get(),
+                               &argstr[argstr_used_len..]));
         }
         argstr_used_len += a_len;
     }
-    argstr_is_reverse_set(false);
-    args_rec(args, argstr)?;
-    argstr_is_reverse_set(false);
+    args_rec(args, ElesRef::new(argstr))?;
     Ok(())
 }
-#[allow(non_upper_case_globals)]
-static mut argstr_is_reverse: bool = false;
-fn argstr_is_reverse_set(b: bool) {
-    unsafe {
-        argstr_is_reverse = b;
-    }
-}
-fn argstr_is_reverse_get() -> bool {
-    unsafe { argstr_is_reverse }
-}
+
 #[allow(unknown_lints,needless_range_loop)]
-fn args_rec(args: &mut [Args], argstr: &[String]) -> Result<(), String> {
-    let ps = {
-        let mut ps = argstr.to_vec();
-        if argstr_is_reverse_get() {
-            ps.reverse();
-        }
-        ps
-    };
+fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String> {
     if args.is_empty() && argstr.is_empty() {
         return Ok(());
     }
     if args.is_empty() && !argstr.is_empty() {
-        let e = format!("Args: \"{:?}\" no need", ps);
+        let e = format!("Args: \"{:?}\" no need", argstr);
         return Err(e);
     }
     if !args.is_empty() && argstr.is_empty() {
@@ -471,34 +460,147 @@ fn args_rec(args: &mut [Args], argstr: &[String]) -> Result<(), String> {
     }
     if let Some(len) = args[0].len {
         if len <= argstr.len() {
-            args[0].parse(&ps[argstr.len() - len..])?;
-            dbln!("Some(len)\nps: {:?}\nargstr: {:?}", ps, argstr);
-            dbln!("Some(len)\nps_parse{:?}\nargstr_rec: {:?}",
-                  &ps[argstr.len() - len..],
-                  &argstr[len..]);
-            args_rec(&mut args[1..], &argstr[len..])?;
+            args[0].parse(argstr.slice(0..len))?;
+            dbln!("Some(len): {} {:?} + {:?}",
+                  len,
+                  argstr.slice(0..len),
+                  argstr.slice(len..));
+            argstr.cut(len..);
+            args_rec(&mut args[1..], argstr)?;
         } else if args[0].is_optional() {
-            args[0].parse(&ps[..])?;
+            args[0].parse(argstr.as_slice())?;
         } else {
-            let e = format!("Args({}): \"{:?}\" no provide enough",
+            let e = format!("Args({}): \"{}\" no provide enough",
                             args[0].name_get(),
-                            &ps[..]);
+                            argstr);
             return Err(e);
         }
     } else if args.len() > 1 {
-        let mut argstr_ = argstr.to_owned();
-        argstr_.reverse();
+        argstr.reverse();
         args.reverse();
-        argstr_is_reverse_set(true);
-        dbln!("len()>1:\nRaw: {:?}\nrec: {:?}", ps, argstr_);
-
-        args_rec(args, &argstr_[..])?;
+        dbln!("len()>1:\nRaw: {:?}\nslice: {}", argstr, argstr);
+        args_rec(args, argstr)?;
     } else {
-        args[0].parse(&ps[..])?;
+        args[0].parse(argstr.as_slice())?;
     }
     Ok(())
 }
 
+#[derive(Debug)]
+struct ElesRef<'e, T: 'e> {
+    raw: &'e [T],
+    start: usize,
+    end: usize,
+    is_reverse: bool,
+}
+impl<'e, T: Clone + std::fmt::Debug> ElesRef<'e, T> {
+    fn new<'l: 'e>(slice: &'l [T]) -> Self {
+        ElesRef {
+            raw: slice,
+            start: 0,
+            end: slice.len(),
+            is_reverse: false,
+        }
+    }
+    fn reverse(&mut self) {
+        self.is_reverse = !self.is_reverse;
+    }
+    #[inline]    
+    fn as_slice(&self) -> &[T] {
+        &self.raw[self.start..self.end]
+    }
+    #[inline]    
+    fn slice<RG: IntoRg>(&self, rg: RG) -> &[T] {
+        let (rg0, rg1) = rg.into().into_range(self.start, self.end, self.is_reverse);
+        self.check(&rg0, &rg1);
+        &self.raw[rg0..rg1]
+    }
+    fn cut<RG: IntoRg>(&mut self, rg: RG) {
+        let (rg0, rg1) = rg.into().into_range(self.start, self.end, self.is_reverse);
+        self.check(&rg0, &rg1);
+        self.start = rg0;
+        self.end = rg1;
+    }
+    #[inline]
+    fn check(&self, rg0: &usize, rg1: &usize) {
+        if rg0 > rg1 {
+            panic!("slice index starts at {} but ends at {}", rg0, rg1);
+        }
+        if *rg0 > self.raw.len() {
+            panic!("slice index starts at {} but ends at {}",
+                   rg0,
+                   self.raw.len());
+        }
+        if *rg1 > self.raw.len() {
+            panic!("index {} out of range for slice of length {}",
+                   rg1,
+                   self.raw.len());
+        }
+    }
+    fn is_empty(&self) -> bool {
+        self.start == self.end
+    }
+    fn len(&self) -> usize {
+        self.end - self.start
+    }
+}
+impl<'e, T: Clone + std::fmt::Debug> std::fmt::Display for ElesRef<'e, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self.as_slice())
+    }
+}
+
+use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
+#[derive(Debug)]
+enum Rg {
+    FT(Range<usize>),
+    F(RangeFrom<usize>),
+    T(RangeTo<usize>),
+    Full,
+}
+impl Rg {
+    fn into_range(self, start: usize, end: usize, is_reverse: bool) -> (usize, usize) {
+        if is_reverse {
+            match self {
+                Rg::FT(ft) => (end - ft.end, end - ft.start),
+                Rg::F(f) => (start, end - f.start),
+                Rg::T(t) => (end - t.end, end),
+                Rg::Full => (start, end),
+            }
+        } else {
+            match self {
+                Rg::FT(ft) => (ft.start + start, ft.end + start),
+                Rg::F(f) => (f.start + start, end),
+                Rg::T(t) => (start, start + t.end),
+                Rg::Full => (start, end),
+            }
+        }
+    }
+}
+trait IntoRg {
+    fn into(self) -> Rg;
+}
+
+impl IntoRg for Range<usize> {
+    fn into(self) -> Rg {
+        Rg::FT(self)
+    }
+}
+impl IntoRg for RangeFrom<usize> {
+    fn into(self) -> Rg {
+        Rg::F(self)
+    }
+}
+impl IntoRg for RangeTo<usize> {
+    fn into(self) -> Rg {
+        Rg::T(self)
+    }
+}
+impl IntoRg for RangeFull {
+    fn into(self) -> Rg {
+        Rg::Full
+    }
+}
 /// **Option**
 #[derive(Debug)]
 pub struct Opt<'app> {
