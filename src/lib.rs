@@ -57,8 +57,12 @@ or
 #[macro_use]
 extern crate stderr;
 extern crate term;
+#[macro_use]
+extern crate quick_error;
 include!("help.rs");
 include!("render.rs");
+include!("elesref.rs");
+include!("error.rs");
 mod ovp;
 pub use ovp::{OptValue, OptValueParse};
 mod avp;
@@ -183,15 +187,28 @@ impl<'app> App<'app> {
     /// `parse(&[String])` and `exit(1)` if parse fails.
     pub fn parse(mut self, args: &[String]) -> Helper {
         if let Err(e) = self.parse_strings(args) {
-            if e == "" {
-                panic!("App::parse_strings()->Err(String::new())");
+            match e {
+                AppError::Parse(s) => {
+                    assert_ne!("",
+                               s.trim(),
+                               "App::parse_strings()->Err(AppError::Parse(String::new()))");
+                    self.helper
+                        .help_cmd_err_exit(self.helper.current_cmd_ref(), s, 1);
+                }
+                AppError::Help(s) => {
+                    assert_ne!(Some(""),
+                               s.as_ref().map(|s| s.as_str()),
+                               "App::parse_strings()->Err(AppError::Help(String::new()))");
+                    self.helper.help_cmd_exit(&s, 0);
+                }
+                AppError::Version => {
+                    self.helper.ver_exit(0);
+                }
             }
-            self.helper
-                .help_cmd_err_exit(self.helper.current_cmd_ref(), e, 1);
         }
         self.into_helper()
     }
-    fn parse_strings(&mut self, args: &[String]) -> Result<(), String> {
+    fn parse_strings(&mut self, args: &[String]) -> Result<(), AppError> {
         dbln!("args: {:?}", args);
         self._build_helper();
         self.helper.current_exe = env::current_exe()
@@ -219,15 +236,16 @@ impl<'app> App<'app> {
         // -h/--help
         if let Some(s) = strings_idx(&args[..], "-h", "--help") {
             if idx != std::usize::MAX && idx < s {
-                self.helper.help_cmd_exit(self.helper.current_cmd_ref(), 0);
+                self.helper.current_cmd_ref().to_app_rest()?;
             } else {
-                self.helper.help_exit(0);
+                let none: Option<String> = None;
+                none.to_app_rest()?;
             }
         }
         // -v/--version
         if let Some(s) = strings_idx(&args[..], "-V", "--version") {
             if idx >= s {
-                self.helper.ver_exit(0);
+                return Err(AppError::Version);
             }
         }
         fn strings_idx(ss: &[String], msg0: &str, msg1: &str) -> Option<usize> {
@@ -256,9 +274,9 @@ impl<'app> App<'app> {
         // check allow_zero_args
         let cmd = &self.cmds[self.helper.current_cmd_ref()];
         if !cmd.allow_zero_args && self.cmds.len() > 1 && self.helper.current_cmd_ref().is_none() {
-            Err("OPTION/COMMAND missing".to_owned())
+            Err(AppError::Parse("OPTION/COMMAND missing".to_owned()))
         } else if !cmd.allow_zero_args {
-            Err("OPTION missing".to_owned())
+            Err(AppError::Parse("OPTION missing".to_owned()))
         } else {
             Ok(())
         }
@@ -447,7 +465,7 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
         return Ok(());
     }
     if args.is_empty() && !argstr.is_empty() {
-        let e = format!("Args: \"{:?}\" no need", argstr);
+        let e = format!("Args: \"{:?}\" no need", argstr.as_slice());
         return Err(e);
     }
     if !args.is_empty() && argstr.is_empty() {
@@ -470,9 +488,9 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
         } else if args[0].is_optional() {
             args[0].parse(argstr.as_slice())?;
         } else {
-            let e = format!("Args({}): \"{}\" no provide enough",
+            let e = format!("Args({}): \"{:?}\" no provide enough",
                             args[0].name_get(),
-                            argstr);
+                            argstr.as_slice());
             return Err(e);
         }
     } else if args.len() > 1 {
@@ -486,121 +504,6 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
     Ok(())
 }
 
-#[derive(Debug)]
-struct ElesRef<'e, T: 'e> {
-    raw: &'e [T],
-    start: usize,
-    end: usize,
-    is_reverse: bool,
-}
-impl<'e, T: Clone + std::fmt::Debug> ElesRef<'e, T> {
-    fn new<'l: 'e>(slice: &'l [T]) -> Self {
-        ElesRef {
-            raw: slice,
-            start: 0,
-            end: slice.len(),
-            is_reverse: false,
-        }
-    }
-    fn reverse(&mut self) {
-        self.is_reverse = !self.is_reverse;
-    }
-    #[inline]    
-    fn as_slice(&self) -> &[T] {
-        &self.raw[self.start..self.end]
-    }
-    #[inline]    
-    fn slice<RG: IntoRg>(&self, rg: RG) -> &[T] {
-        let (rg0, rg1) = rg.into().into_range(self.start, self.end, self.is_reverse);
-        self.check(&rg0, &rg1);
-        &self.raw[rg0..rg1]
-    }
-    fn cut<RG: IntoRg>(&mut self, rg: RG) {
-        let (rg0, rg1) = rg.into().into_range(self.start, self.end, self.is_reverse);
-        self.check(&rg0, &rg1);
-        self.start = rg0;
-        self.end = rg1;
-    }
-    #[inline]
-    fn check(&self, rg0: &usize, rg1: &usize) {
-        if rg0 > rg1 {
-            panic!("slice index starts at {} but ends at {}", rg0, rg1);
-        }
-        if *rg0 > self.raw.len() {
-            panic!("slice index starts at {} but ends at {}",
-                   rg0,
-                   self.raw.len());
-        }
-        if *rg1 > self.raw.len() {
-            panic!("index {} out of range for slice of length {}",
-                   rg1,
-                   self.raw.len());
-        }
-    }
-    fn is_empty(&self) -> bool {
-        self.start == self.end
-    }
-    fn len(&self) -> usize {
-        self.end - self.start
-    }
-}
-impl<'e, T: Clone + std::fmt::Debug> std::fmt::Display for ElesRef<'e, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self.as_slice())
-    }
-}
-
-use std::ops::{Range, RangeFrom, RangeTo, RangeFull};
-#[derive(Debug)]
-enum Rg {
-    FT(Range<usize>),
-    F(RangeFrom<usize>),
-    T(RangeTo<usize>),
-    Full,
-}
-impl Rg {
-    fn into_range(self, start: usize, end: usize, is_reverse: bool) -> (usize, usize) {
-        if is_reverse {
-            match self {
-                Rg::FT(ft) => (end - ft.end, end - ft.start),
-                Rg::F(f) => (start, end - f.start),
-                Rg::T(t) => (end - t.end, end),
-                Rg::Full => (start, end),
-            }
-        } else {
-            match self {
-                Rg::FT(ft) => (ft.start + start, ft.end + start),
-                Rg::F(f) => (f.start + start, end),
-                Rg::T(t) => (start, start + t.end),
-                Rg::Full => (start, end),
-            }
-        }
-    }
-}
-trait IntoRg {
-    fn into(self) -> Rg;
-}
-
-impl IntoRg for Range<usize> {
-    fn into(self) -> Rg {
-        Rg::FT(self)
-    }
-}
-impl IntoRg for RangeFrom<usize> {
-    fn into(self) -> Rg {
-        Rg::F(self)
-    }
-}
-impl IntoRg for RangeTo<usize> {
-    fn into(self) -> Rg {
-        Rg::T(self)
-    }
-}
-impl IntoRg for RangeFull {
-    fn into(self) -> Rg {
-        Rg::Full
-    }
-}
 /// **Option**
 #[derive(Debug)]
 pub struct Opt<'app> {
