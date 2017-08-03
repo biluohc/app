@@ -19,6 +19,8 @@ travis-ci = { repository = "biluohc/app" }
 # stderr = {path = "../stderr"}
 stderr = { git = "https://github.com/biluohc/stderr", branch = "master", version = "0.8.0"}
 term = "0.2" # color
+quick-error= "^1.2.0"
+
 
 [[test]]
 name ="fht2p"
