@@ -465,7 +465,7 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
         return Ok(());
     }
     if args.is_empty() && !argstr.is_empty() {
-        let e = format!("Args: \"{:?}\" no need", argstr);
+        let e = format!("Args: \"{:?}\" no need", argstr.as_slice());
         return Err(e);
     }
     if !args.is_empty() && argstr.is_empty() {
@@ -488,9 +488,9 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
         } else if args[0].is_optional() {
             args[0].parse(argstr.as_slice())?;
         } else {
-            let e = format!("Args({}): \"{}\" no provide enough",
+            let e = format!("Args({}): \"{:?}\" no provide enough",
                             args[0].name_get(),
-                            argstr);
+                            argstr.as_slice());
             return Err(e);
         }
     } else if args.len() > 1 {
