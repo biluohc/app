@@ -181,7 +181,7 @@ struct OptInfo(String, String);
 impl<'app> Opt<'app> {
     fn to_info(&self) -> OptInfo {
         let optional_or_dafault = if self.is_optional() {
-            OPTIONAL.to_owned()
+            statics::OPTIONAL_get().to_owned()
         } else {
             self.value
                 .as_ref()
@@ -254,7 +254,7 @@ impl<'app> Cmd<'app> {
         let mut vs = Vec::new();
         for v in &self.args {
             let optional_or_dafault = if v.is_optional() {
-                OPTIONAL.to_owned()
+            statics::OPTIONAL_get().to_owned()
             } else {
                 v.value
                     .as_ref()

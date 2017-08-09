@@ -67,6 +67,8 @@ mod ovp;
 pub use ovp::{OptValue, OptValueParse};
 mod avp;
 pub use avp::{ArgsValue, ArgsValueParse};
+/// Mut Statics
+pub mod statics;
 
 use std::collections::BTreeMap as Map;
 use std::default::Default;
@@ -75,13 +77,9 @@ use std::process::exit;
 use std::fmt::Display;
 use std::env;
 
-const ERROR_LINE_NUM: usize = 1; // for print error with color(Red)
 static mut HELP: bool = false;
 static mut HELP_SUBCMD: bool = false;
 static mut VERSION: bool = false;
-static OPTIONAL: &'static str = "(optional)";
-static OPT_HELP_SORT_KEY: &'static str ="___app_internal0";
-static OPT_VERSION_SORT_KEY: &'static str = "___app_internal1";
 
 /// **Application**
 #[derive(Debug,Default)]
@@ -329,7 +327,7 @@ impl<'app> Cmd<'app> {
     /// `default` and add `-h/--help` `Opt`
     fn add_help(self, b: &'static mut bool) -> Self {
         self.opt(Opt::new("help", b)
-                    .sort_key(OPT_HELP_SORT_KEY)
+                    .sort_key(statics::OPT_HELP_SORT_KEY_get())
                      .short("h")
                      .long("help")
                      .help("Show the help message"))
@@ -337,7 +335,7 @@ impl<'app> Cmd<'app> {
     /// add `-v/version` `Opt`
     fn add_version(self) -> Self {
         self.opt(Opt::new("version", unsafe { &mut VERSION })
-                    .sort_key(OPT_VERSION_SORT_KEY)
+                    .sort_key(statics::OPT_VERSION_SORT_KEY_get())
                      .short("V")
                      .long("version")
                      .help("Show the version message"))
@@ -471,10 +469,10 @@ fn args_handle(args: &mut [Args], argstr: &[String]) -> Result<(), String> {
               a_len);
         if argstr_used_len == argstr.len() && a_len != 0 {
             dbln!("argstr_used_len == argstr.len() && a_len != 0");
-            return Err(format!("Args({}) no provide", a.name_get()));
+            return Err(format!("Args({}) not provide", a.name_get()));
         } else if argstr_used_len + a_len > argstr.len() {
             dbln!("argstr_used_len + a_len > argstr.len()");
-            return Err(format!("Args({}) no provide enough: {:?}",
+            return Err(format!("Args({}) not provide enough: {:?}",
                                a.name_get(),
                                &argstr[argstr_used_len..]));
         }
@@ -490,13 +488,13 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
         return Ok(());
     }
     if args.is_empty() && !argstr.is_empty() {
-        let e = format!("Args: \"{:?}\" no need", argstr.as_slice());
+        let e = format!("Args: \"{:?}\" not need", argstr.as_slice());
         return Err(e);
     }
     if !args.is_empty() && argstr.is_empty() {
         for idx in 0..args.len() {
             if !args[idx].is_optional() && args[idx].value.as_ref().default().is_none() {
-                let e = format!("Args({}) no provide", args[idx].name_get());
+                let e = format!("Args({}) not provide", args[idx].name_get());
                 return Err(e);
             }
         }
@@ -513,7 +511,7 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
         } else if args[0].is_optional() {
             args[0].parse(argstr.as_slice())?;
         } else {
-            let e = format!("Args({}): \"{:?}\" no provide enough",
+            let e = format!("Args({}): \"{:?}\" not provide enough",
                             args[0].name_get(),
                             argstr.as_slice());
             return Err(e);

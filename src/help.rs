@@ -181,16 +181,17 @@ impl Helper {
     pub fn err_exit<E>(&self, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.err(error), ERROR_LINE_NUM);
+        self.err_line_print(&self.err(error), statics::ERROR_LINE_COLOR_get()
+);
         exit(status);
     }
     /// print error message line(2) with Red color(fg)
     #[inline]
-    pub fn err_line_print(&self, msg: &str, line_num: usize) {
+    pub fn err_line_print(&self, msg: &str, line_color:u16) {
         for (i, line) in msg.trim().lines().enumerate() {
-            if i == line_num {
+            if i == 1 {
                 let mut t = term::stderr().unwrap();
-                t.fg(term::color::RED).unwrap();
+                t.fg(line_color).unwrap();
                 write!(t, "{}", line).unwrap();
                 t.reset().unwrap();
             } else {
@@ -217,7 +218,7 @@ impl Helper {
     pub fn help_err_exit<E>(&self, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.help_err(error), ERROR_LINE_NUM);
+        self.err_line_print(&self.help_err(error), statics::ERROR_LINE_COLOR_get());
         exit(status);
     }
     /// get sub_command's help message
@@ -239,7 +240,7 @@ impl Helper {
     pub fn help_cmd_err_exit<E>(&self, cmd_name: &Option<String>, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.help_cmd_err(cmd_name, error), ERROR_LINE_NUM);
+        self.err_line_print(&self.help_cmd_err(cmd_name, error), statics::ERROR_LINE_COLOR_get());
         exit(status);
     }
 }
