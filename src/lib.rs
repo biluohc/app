@@ -88,6 +88,7 @@ static OPT_VERSION_SORT_KEY: &'static str = "___app_internal1";
 pub struct App<'app> {
     // None is main
     cmds: Map<Option<String>, Cmd<'app>>, // key, Cmd
+    str_to_key: Map<String,Option<String>>, // cmd/cmd_short, key
     pub helper: Helper,
 }
 
@@ -156,7 +157,17 @@ impl<'app> App<'app> {
     }
     /// add a sub_command
     pub fn cmd(mut self, cmd: Cmd<'app>) -> Self {
+        let name = cmd.name.map(|s| s.to_string());
+        let short = cmd.short.map(|s| s.to_string());
         let key = cmd.sort_key.map(|s| s.to_string());
+        if self.str_to_key.insert(name.clone().unwrap(),key.clone()).is_some() {
+            panic!("Cmd: \"{:?}\" already defined",name.as_ref().unwrap());
+        }
+        if short.is_some() {
+            if self.str_to_key.insert(short.clone().unwrap(),key.clone()).is_some() {
+            panic!("Cmd's short: \"{:?}\" already defined",short.as_ref().unwrap());
+        }
+        }
         if self.cmds.insert(key.clone(), cmd).is_some() {
             panic!("Cmd(or it's sort_key): \"{:?}\" already defined",key);
         }
@@ -223,15 +234,12 @@ impl<'app> App<'app> {
         self.helper.temp_dir = env::temp_dir().to_string_lossy().into_owned();
         let mut idx = std::usize::MAX; // cmd_idx
         {
-            let commands: Vec<&Option<String>> = self.cmds.keys().collect();
-            'out: for (i, arg) in args.iter().enumerate() {
-                for cmd in &commands {
-                    let arg = Some(arg.to_string());
-                    if arg == **cmd {
+             for (i, arg) in args.iter().enumerate() {
+                if let Some(a)= self.str_to_key.get(arg) {
                         idx = i;
-                        self.helper.current_cmd = arg;
-                        break 'out;
-                    }
+                        self.helper.current_cmd = self.cmds[&a].name.map(|s|s.to_string());                        
+                        self.helper.current_cmd_sort_key = a.clone();
+                        break ;
                 }
             }
         }
@@ -261,7 +269,7 @@ impl<'app> App<'app> {
         if idx != std::usize::MAX {
             self.cmds.get_mut(&None).unwrap().parse(&args[0..idx])?;
             self.cmds
-                .get_mut(self.helper.current_cmd_ref())
+                .get_mut(&self.helper.current_cmd_sort_key)
                 .unwrap()
                 .parse(&args[idx + 1..])?;
         } else {
@@ -270,12 +278,12 @@ impl<'app> App<'app> {
         // check main
         self.check(&None)?;
         // check current_cmd
-        if self.helper.current_cmd().is_some() {
-            self.check(self.helper.current_cmd_ref())?;
+        if self.helper.current_cmd_sort_key.is_some() {
+            self.check(&self.helper.current_cmd_sort_key)?;
         }
         // check allow_zero_args
-        let cmd = &self.cmds[self.helper.current_cmd_ref()];
-        if !cmd.allow_zero_args && self.cmds.len() > 1 && self.helper.current_cmd_ref().is_none() {
+        let cmd = &self.cmds[&self.helper.current_cmd_sort_key];
+        if !cmd.allow_zero_args && self.cmds.len() > 1 && self.helper.current_cmd.is_none() {
             Err(AppError::Parse("OPTION/COMMAND missing".to_owned()))
         } else if !cmd.allow_zero_args {
             Err(AppError::Parse("OPTION missing".to_owned()))
@@ -284,8 +292,8 @@ impl<'app> App<'app> {
         }
     }
     // check Cmd's Opts and Args
-    fn check(&self, cmd_name: &Option<String>) -> Result<(), String> {
-        let cmd = &self.cmds[cmd_name];
+    fn check(&self, cmd_key: &Option<String>) -> Result<(), String> {
+        let cmd = &self.cmds[cmd_key];
         // Opt
         for opt in cmd.opts.values() {
             if !opt.is_optional() {
@@ -309,6 +317,7 @@ impl<'app> App<'app> {
 #[derive(Debug,Default)]
 pub struct Cmd<'app> {
     name: Option<&'app str>,
+    short: Option<&'app str>,
     sort_key: Option<&'app str>,
     desc: &'app str,
     opts: Map<String, Opt<'app>>, // key to Opt
@@ -341,6 +350,10 @@ impl<'app> Cmd<'app> {
         c.name = Some(name.clone());
         c.sort_key = Some(name);
         c.add_help(unsafe { &mut HELP_SUBCMD })
+    }
+    pub fn short<'s: 'app>(mut self,short: &'s str) -> Self {
+        self.short=Some(short);
+        self
     }
     /// Default is `Cmd`'s name
     pub fn sort_key(mut self,sort_key: &'app str)->Self {

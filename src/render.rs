@@ -19,18 +19,19 @@ impl<'app> App<'app> {
 
         // CMDs
         for (k, v) in &self.cmds {
-            // INFP
-            let info = self._help_info(k, 1);
-            self.helper.helps.cmd_infos.insert(k.clone(), info);
+            let cmd_name = v.name.map(|s| s.to_string());
+            // INFO
+            let info = self._help_info(v.name, k, 1);
+            self.helper.helps.cmd_infos.insert(cmd_name.clone(), info);
             // USAGE
-            let usage = self._help_usage(k, 3);
-            self.helper.helps.cmd_usages.insert(k.clone(), usage);
+            let usage = self._help_usage(v.name, k, 3);
+            self.helper.helps.cmd_usages.insert(cmd_name.clone(), usage);
             // OPTIONS
             if !v.opts.is_empty() {
                 self.helper
                     .helps
                     .cmd_options
-                    .insert(k.clone(),
+                    .insert(cmd_name.clone(),
                             format!("OPTIONS:\n{}", v.to_opts_info().to_string(3, 5)));
             }
             // ARGS
@@ -38,7 +39,7 @@ impl<'app> App<'app> {
                 self.helper
                     .helps
                     .cmd_args
-                    .insert(k.clone(),
+                    .insert(cmd_name.clone(),
                             format!("ARGS:\n{}", v.to_args_info().to_string(3, 5)));
             }
         }
@@ -51,13 +52,13 @@ impl<'app> App<'app> {
                 self.helper.version.trim())
     }
     // CMD_INFO
-    fn _help_info(&self, cmd_name: &Option<String>, blanks0: usize) -> String {
-        let version_or_subcmd = cmd_name.as_ref().unwrap_or(self.helper.version()).trim();
+    fn _help_info(&self, cmd_name: Option<&str>, cmd_key: &Option<String>, blanks0: usize) -> String {
+        let version_or_subcmd = cmd_name.unwrap_or(self.helper.version()).trim();
         format!("{}{}{}\n{}",
                 self.helper.name.trim(),
                 blanks_fix(blanks0),
                 version_or_subcmd,
-                self.cmds[cmd_name].desc.trim())
+                self.cmds[cmd_key].desc.trim())
     }
     // AUTHOR
     fn _help_author(&self, blanks0: usize) -> String {
@@ -85,35 +86,40 @@ impl<'app> App<'app> {
     fn _help_sub_cmds(&self, blanks0: usize, blanks1: usize) -> String {
         let mut cammands = "".to_owned();
         let mut max_len = 0;
-        self.cmds
-            .values()
-            .map(|cmd| {
-                     cmd.name
-                         .map(|s| if s.len() > max_len {
-                                  max_len = s.len()
-                              })
-                 })
-            .count();
+        let mut vs: Vec<String> = vec![];
         self.cmds
             .values()
             .map(|cmd| if cmd.name != None {
+                     let s = cmd.name.unwrap().to_string() +
+                             &cmd.short
+                                 .map(|ss| format!(", {}", ss))
+                                 .unwrap_or(String::new());
+
+                     if s.len() > max_len {
+                         max_len = s.len()
+                     }
+                     vs.push(s);
+                 })
+            .count();
+        let mut it = vs.iter();
+        self.cmds
+            .values()
+            .map(|cmd| if cmd.name != None {
+                     let name_ = it.next().unwrap();
                      cammands.push_str(&format!("{}{}{}{}\n",
                                                blanks_fix(blanks0),
-                                               cmd.name.as_ref().unwrap(),
-                                               blanks_fix(blanks1 + max_len - cmd.name.as_ref().unwrap().len()),
+                                               name_,
+                                               blanks_fix(blanks1 + max_len - name_.len()),
                                                cmd.desc))
                  })
             .count();
         cammands
     }
     //CMD_USAGE
-    fn _help_usage(&self, cmd_name: &Option<String>, blanks0: usize) -> String {
+    fn _help_usage(&self, cmd_name: Option<&str>, cmd_key: &Option<String>, blanks0: usize) -> String {
         let pkg = &self.helper.name;
-        let none_or_cmdname = cmd_name
-            .as_ref()
-            .map(|s| format!(" {}", s))
-            .unwrap_or("".to_owned());
-        let cmd = &self.cmds[cmd_name];
+        let none_or_cmdname = cmd_name.map(|s| format!(" {}", s)).unwrap_or("".to_owned());
+        let cmd = &self.cmds[cmd_key];
         let mut usages = Vec::new();
 
         let mut option_optional = false;
@@ -157,7 +163,7 @@ impl<'app> App<'app> {
         } else {
             usages.push(format!("{}{} options {}", pkg, none_or_cmdname, argss.trim()));
         }
-        if *cmd_name == None && self.cmds.len() > 1 {
+        if cmd_name == None && self.cmds.len() > 1 {
             usages.push(format!("{} <command> [args]", pkg));
         }
         usages.as_mut_slice().sort_by(|a, b| a.len().cmp(&b.len()));

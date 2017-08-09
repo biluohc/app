@@ -27,7 +27,9 @@ impl Config {
                 .addr("Repository", "https://github.com/biluohc/zipcs")
                 .desc("Useful tools collection")
                 .allow_zero_args(false)
-                .cmd(Cmd::new("zip").sort_key("a0")
+                .cmd(Cmd::new("zip")
+                .short("z")
+                .sort_key("a0")
                          .desc("Unzip with charset setting")
                          .opt(Opt::new("list", &mut list)
                                   .short("l")
@@ -42,7 +44,9 @@ impl Config {
                                   .long("outdir")
                                   .help("Sets Output directory"))
                          .args(Args::new("ZipArchives", &mut config.zip.zips).help("ZipArchives need to unzip")))
-                .cmd(Cmd::new("ping").sort_key("a1")
+                .cmd(Cmd::new("ping")
+                .short("p")
+                .sort_key("a1")
                          .desc("ping domains/ips")
                          .opt(Opt::new("count", &mut config.ping.count)
                                   .short("c")
@@ -56,7 +60,9 @@ impl Config {
                                   .long("only-line")
                                   .help("print result only-line"))
                          .args(Args::new("Hosts/IPs", &mut config.ping.hosts).help("Hosts or IPs need to ping")))
-                .cmd(Cmd::new("url").sort_key("a2")
+                .cmd(Cmd::new("url")
+                .short("l")
+                .sort_key("a2")
                          .desc("Urls decoding/encoding")
                          .opt(Opt::new("encode", &mut config.url.is_encode)
                                   .short("e")
@@ -78,6 +84,7 @@ impl Config {
             .unwrap(); // map_err alrendy exit if it is err, so unwrap is safe.
     }
     fn check_and_call(self, cmd: Option<&str>) -> Result<(), String> {
+        println!("Match Cmd: {:?}", cmd);
         match cmd {
             Some("zip") => {
                 self.zip.check()?;

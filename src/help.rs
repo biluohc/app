@@ -106,6 +106,7 @@ pub struct Helper {
     temp_dir: String,
     //  current_cmd
     current_cmd: Option<String>, //main is None
+    current_cmd_sort_key:  Option<String>,
     pub helps: Helps,
 }
 
