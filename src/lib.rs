@@ -80,12 +80,14 @@ static mut HELP: bool = false;
 static mut HELP_SUBCMD: bool = false;
 static mut VERSION: bool = false;
 static OPTIONAL: &'static str = "(optional)";
+static OPT_HELP_SORT_KEY: &'static str ="___app_internal0";
+static OPT_VERSION_SORT_KEY: &'static str = "___app_internal1";
 
 /// **Application**
 #[derive(Debug,Default)]
 pub struct App<'app> {
     // None is main
-    cmds: Map<Option<String>, Cmd<'app>>, // name, Cmd
+    cmds: Map<Option<String>, Cmd<'app>>, // key, Cmd
     pub helper: Helper,
 }
 
@@ -154,9 +156,9 @@ impl<'app> App<'app> {
     }
     /// add a sub_command
     pub fn cmd(mut self, cmd: Cmd<'app>) -> Self {
-        let name = cmd.name.map(|s| s.to_string());
-        if self.cmds.insert(name.clone(), cmd).is_some() {
-            panic!("Command: \"{:?}\" already defined", name);
+        let key = cmd.sort_key.map(|s| s.to_string());
+        if self.cmds.insert(key.clone(), cmd).is_some() {
+            panic!("Cmd(or it's sort_key): \"{:?}\" already defined",key);
         }
         self
     }
@@ -307,9 +309,10 @@ impl<'app> App<'app> {
 #[derive(Debug,Default)]
 pub struct Cmd<'app> {
     name: Option<&'app str>,
+    sort_key: Option<&'app str>,
     desc: &'app str,
-    opts: Map<String, Opt<'app>>,
-    str_to_name: Map<String, String>, //-short/--long to name
+    opts: Map<String, Opt<'app>>, // key to Opt
+    str_to_key: Map<String, String>, //-short/--long to key
     args: Vec<Args<'app>>,
     allow_zero_args: bool,
 }
@@ -317,6 +320,7 @@ impl<'app> Cmd<'app> {
     /// `default` and add `-h/--help` `Opt`
     fn add_help(self, b: &'static mut bool) -> Self {
         self.opt(Opt::new("help", b)
+                    .sort_key(OPT_HELP_SORT_KEY)
                      .short("h")
                      .long("help")
                      .help("Show the help message"))
@@ -324,6 +328,7 @@ impl<'app> Cmd<'app> {
     /// add `-v/version` `Opt`
     fn add_version(self) -> Self {
         self.opt(Opt::new("version", unsafe { &mut VERSION })
+                    .sort_key(OPT_VERSION_SORT_KEY)
                      .short("V")
                      .long("version")
                      .help("Show the version message"))
@@ -333,8 +338,14 @@ impl<'app> Cmd<'app> {
     pub fn new<'s: 'app>(name: &'s str) -> Self {
         let mut c = Self::default();
         c.allow_zero_args = true;
-        c.name = Some(name);
+        c.name = Some(name.clone());
+        c.sort_key = Some(name);
         c.add_help(unsafe { &mut HELP_SUBCMD })
+    }
+    /// Default is `Cmd`'s name
+    pub fn sort_key(mut self,sort_key: &'app str)->Self {
+        self.sort_key =Some(sort_key);
+        self
     }
     /// description
     pub fn desc<'s: 'app>(mut self, desc: &'s str) -> Self {
@@ -350,7 +361,8 @@ impl<'app> Cmd<'app> {
     pub fn opt(mut self, opt: Opt<'app>) -> Self {
         let long = opt.long_get();
         let short = opt.short_get();
-        let name = opt.name_get().to_string();
+        let name = opt.name_get();
+        let key = opt.sort_key_get().to_string();        
         if long.is_none() && short.is_none() {
             panic!("OPTION: \"{}\" don't have --{} and -{} all",
                    name,
@@ -358,17 +370,17 @@ impl<'app> Cmd<'app> {
                    name);
         }
         if let Some(ref s) = long {
-            if self.str_to_name.insert(s.clone(), name.clone()).is_some() {
+            if self.str_to_key.insert(s.clone(), key.clone()).is_some() {
                 panic!("long: \"{}\" already defined", s);
             }
         }
         if let Some(ref s) = short {
-            if self.str_to_name.insert(s.clone(), name.clone()).is_some() {
+            if self.str_to_key.insert(s.clone(), key.clone()).is_some() {
                 panic!("short: \"{}\" already defined", s);
             }
         }
-        if self.opts.insert(name.clone(), opt).is_some() {
-            panic!("name: \"{}\" already defined", name);
+        if self.opts.insert(key.clone(), opt).is_some() {
+            panic!("Opt(or it's sort_key): \"{}\" already defined", key);
         }
         self
     }
@@ -388,8 +400,8 @@ impl<'app> Cmd<'app> {
             // println!("i+1/args_len: {}/{}: {:?}", i + 1, args.len(), &args[i..]);
             match arg {
                 s if s.starts_with("--") && s != "--" => {
-                    if let Some(opt_name) = self.str_to_name.get(s.as_str()) {
-                        let mut opt = self.opts.get_mut(opt_name).unwrap();
+                    if let Some(opt_key) = self.str_to_key.get(s.as_str()) {
+                        let mut opt = self.opts.get_mut(opt_key).unwrap();
                         let opt_is_bool = opt.is_bool();
                         if !opt_is_bool && args.len() > i + 1 {
                             opt.parse(&args[i + 1])?;
@@ -405,8 +417,8 @@ impl<'app> Cmd<'app> {
                     }
                 }
                 s if s.starts_with('-') && s != "-" && s != "--" => {
-                    if let Some(opt_name) = self.str_to_name.get(s.as_str()) {
-                        let mut opt = self.opts.get_mut(opt_name).unwrap();
+                    if let Some(opt_key) = self.str_to_key.get(s.as_str()) {
+                        let mut opt = self.opts.get_mut(opt_key).unwrap();
                         let opt_is_bool = opt.is_bool();
                         if !opt_is_bool && args.len() > i + 1 {
                             opt.parse(&args[i + 1])?;
@@ -508,6 +520,7 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
 #[derive(Debug)]
 pub struct Opt<'app> {
     name: &'app str,
+    sort_key:&'app str,
     value: OptValue<'app>,
     optional: bool,
     short: Option<&'app str>,
@@ -537,12 +550,18 @@ impl<'app> Opt<'app> {
     {
         Opt {
             value: value.into(),
-            name: name,
+            name: name.clone(),
+            sort_key:name,
             optional: false,
             short: None,
             long: None,
             help: "",
         }
+    }
+    /// Default is `Opt`'s name
+    pub fn sort_key(mut self,sort_key: &'app str)->Self {
+        self.sort_key = sort_key;
+        self
     }
     /// set `Opt`s optional as `true`(default is `false`)(override `OptValueParse`'s `default` and `check`).
     ///
@@ -587,6 +606,9 @@ impl<'app> Opt<'app> {
     }
     pub fn name_get(&self) -> &'app str {
         self.name
+    }
+    pub fn sort_key_get(&self) -> &'app str {
+        self.sort_key
     }
     pub fn short_get(&self) -> Option<String> {
         self.short.map(|s| "-".to_owned() + s)
