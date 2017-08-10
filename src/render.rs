@@ -92,8 +92,8 @@ impl<'app> App<'app> {
             .map(|cmd| if cmd.name != None {
                      let s = cmd.name.unwrap().to_string() +
                              &cmd.short
-                                 .map(|ss| format!(", {}", ss))
-                                 .unwrap_or(String::new());
+                                  .map(|ss| format!(", {}", ss))
+                                  .unwrap_or(String::new());
 
                      if s.len() > max_len {
                          max_len = s.len()
@@ -134,27 +134,18 @@ impl<'app> App<'app> {
             .as_slice()
             .iter()
             .map(|args| {
-                let fmt_ = if args.optional || args.value.as_ref().default().is_some() {
-                    if args.len == Some(1) {
-                        format!("[{}] ", args.name)
-                    } else if args.len == Some(2) {
-                        format!("[{} {}] ", args.name, args.name)
-                    } else if args.len == None {
-                        format!("[{}...] ", args.name)
-                    } else {
-                        format!("[{}{{{}}}] ", args.name, args.len.as_ref().unwrap())
-                    }
+                let mut fmt_ = if args.len == Some(1) {
+                    format!("<{}>", args.name)
+                } else if args.len == Some(2) {
+                    format!("<{}> <{}>", args.name, args.name)
+                } else if args.len == None {
+                    format!("<{}>...", args.name)
                 } else {
-                    if args.len == Some(1) {
-                        format!("<{}> ", args.name)
-                    } else if args.len == Some(2) {
-                        format!("<{}> <{}> ", args.name, args.name)
-                    } else if args.len == None {
-                        format!("<{}...> ", args.name)
-                    } else {
-                        format!("<{}{{{}}}> ", args.name, args.len.as_ref().unwrap())
-                    }
+                    format!("<{}>{{{}}}", args.name, args.len.as_ref().unwrap())
                 };
+                if args.optional || args.value.as_ref().default().is_some() {
+                    fmt_ = format!("[{}] ", fmt_);
+                }
                 argss.push_str(&fmt_);
             })
             .count();
@@ -254,7 +245,7 @@ impl<'app> Cmd<'app> {
         let mut vs = Vec::new();
         for v in &self.args {
             let optional_or_dafault = if v.is_optional() {
-            statics::OPTIONAL_get().to_owned()
+                statics::OPTIONAL_get().to_owned()
             } else {
                 v.value
                     .as_ref()

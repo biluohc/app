@@ -43,7 +43,7 @@ impl Config {
                                   .short("o")
                                   .long("outdir")
                                   .help("Sets Output directory"))
-                         .args(Args::new("ZipArchives", &mut config.zip.zips).help("ZipArchives need to unzip")))
+                         .args(Args::new("ZipArchive", &mut config.zip.zips).help("ZipArchive need to unzip")))
                 .cmd(Cmd::new("ping")
                 .short("p")
                 .sort_key("a1")
@@ -59,7 +59,7 @@ impl Config {
                                   .short("l")
                                   .long("only-line")
                                   .help("print result only-line"))
-                         .args(Args::new("Hosts/IPs", &mut config.ping.hosts).help("Hosts or IPs need to ping")))
+                         .args(Args::new("Host/IP", &mut config.ping.hosts).help("Host or IP need to ping")))
                 .cmd(Cmd::new("url")
                 .short("l")
                 .sort_key("a2")
@@ -72,7 +72,7 @@ impl Config {
                                   .short("p")
                                   .long("plus")
                                   .help("replaces ' ' with '+'"))
-                         .args(Args::new("Urls", &mut config.url.strs).help("Urls need to decode/encode")))
+                         .args(Args::new("Url", &mut config.url.strs).help("Url need to decode/encode")))
                 .parse_args()
         };
         if list {
@@ -115,7 +115,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut CharSet {
     }
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         match CharSet::new(msg) {
-            Err(_) => return Err(format!("OPTION({}) parse<CharSet> fails: \"{}\"", opt_name, msg)),
+            Err(_) => return Err(format!("OPTION(<{}>) parse<CharSet> fails: \"{}\"", opt_name, msg)),
             Ok(o) => **self = o,
         }
         Ok(())

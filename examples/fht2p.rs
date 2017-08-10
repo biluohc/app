@@ -44,7 +44,7 @@ impl Config {
                          .short("p")
                          .long("port")
                          .help("Sets listenning port"))
-                .args(Args::new("PATHS", &mut config.paths).help("Sets the paths to share"))
+                .args(Args::new("PATH", &mut config.paths).help("Sets the path to share"))
                 .parse_args()
         };
         if cp {
@@ -65,7 +65,7 @@ impl Config {
     fn check(self) -> Result<Self, String> {
         for path in &self.paths {
             if !path.as_path().exists() {
-                return Err(format!("Args(PATHS): {:?} is not exists", path));
+                return Err(format!("Args(<PATH>): {:?} is not exists", path));
             }
         }
         Ok(self)

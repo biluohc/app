@@ -69,7 +69,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<String> {
     }
     fn check(&self, args_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("Args({}) missing", args_name))
+            Err(format!("Args(<{}>) missing", args_name))
         } else {
             Ok(())
         }
@@ -98,7 +98,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<PathBuf> {
     }
     fn check(&self, args_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("Args({}) missing", args_name))
+            Err(format!("Args(<{}>) missing", args_name))
         } else {
             Ok(())
         }
@@ -123,7 +123,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<char> {
         for str in msg {
             let chars: Vec<char> = str.chars().collect();
             if chars.len() != 1 {
-                return Err(format!("Args({}): {:?} is invalid", args_name, str));
+                return Err(format!("Args(<{}>): {:?} is invalid", args_name, str));
             } else {
                 self.push(chars[0]);
             }
@@ -132,7 +132,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<char> {
     }
     fn check(&self, args_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("Args({}) missing", args_name))
+            Err(format!("Args(<{}>) missing", args_name))
         } else {
             Ok(())
         }
@@ -158,7 +158,7 @@ macro_rules! add_vec_impl {
                 for str in &vs {
                     self.push(str.parse::<$t>()
                                .map_err(|_| {
-                                            format!("Args({}) parse<{}> fails: \"{}\"",
+                                            format!("Args(<{}>) parse<{}> fails: \"{}\"",
                                                     args_name,
                                                     stringify!($t),
                                                     str)
@@ -168,7 +168,7 @@ macro_rules! add_vec_impl {
     }
     fn check(&self, args_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("Args({}) missing", args_name))
+            Err(format!("Args(<{}>) missing", args_name))
         } else {
             Ok(())
         }

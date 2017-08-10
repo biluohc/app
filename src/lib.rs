@@ -264,14 +264,15 @@ impl<'app> App<'app> {
             }
             None
         }
+        let app_has_subcmds = self.cmds.len()>1;
         if idx != std::usize::MAX {
-            self.cmds.get_mut(&None).unwrap().parse(&args[0..idx])?;
+            self.cmds.get_mut(&None).unwrap().parse(&args[0..idx], &app_has_subcmds)?;
             self.cmds
                 .get_mut(&self.helper.current_cmd_sort_key)
                 .unwrap()
-                .parse(&args[idx + 1..])?;
+                .parse(&args[idx + 1..],&app_has_subcmds)?;
         } else {
-            self.cmds.get_mut(&None).unwrap().parse(&args[..])?;
+            self.cmds.get_mut(&None).unwrap().parse(&args[..],&app_has_subcmds)?;
         }
         // check main
         self.check(&None)?;
@@ -400,7 +401,7 @@ impl<'app> Cmd<'app> {
         self.allow_zero_args = allow;
         self
     }
-    fn parse(&mut self, args: &[String]) -> Result<(), String> {
+    fn parse(&mut self, args: &[String],app_has_subcmds:&bool) -> Result<(), String> {
         let mut args_vec: Vec<String> = Vec::new();
         let mut i = 0;
         for _ in 0..args.len() {
@@ -424,7 +425,7 @@ impl<'app> Cmd<'app> {
                             return Err(format!("OPTION({})'s value missing", s));
                         }
                     } else {
-                        return Err(format!("OPTION: \"{}\" not defined", s));
+                        return Err(format!("OPTION: {:?} is undefined", s));
                     }
                 }
                 s if s.starts_with('-') && s != "-" && s != "--" => {
@@ -441,7 +442,7 @@ impl<'app> Cmd<'app> {
                             return Err(format!("OPTION({})'s value missing", s));
                         }
                     } else {
-                        return Err(format!("OPTION: \"{}\" not defined", s));
+                        return Err(format!("OPTION: \"{}\" is undefined", s));
                     }
                 }
                 s => {
@@ -449,6 +450,10 @@ impl<'app> Cmd<'app> {
                     i += 1;
                 }
             }
+        }
+        if self.name .is_none()&& *app_has_subcmds && self.args.is_empty()&& !args_vec.is_empty() {
+            return Err(format!("Command: {:?} is undefined", args_vec[0])
+            );
         }
         args_handle(&mut self.args, &args_vec[..])?;
         Ok(())
@@ -469,10 +474,10 @@ fn args_handle(args: &mut [Args], argstr: &[String]) -> Result<(), String> {
               a_len);
         if argstr_used_len == argstr.len() && a_len != 0 {
             dbln!("argstr_used_len == argstr.len() && a_len != 0");
-            return Err(format!("Args({}) not provide", a.name_get()));
+            return Err(format!("Args(<{}>) not provide", a.name_get()));
         } else if argstr_used_len + a_len > argstr.len() {
             dbln!("argstr_used_len + a_len > argstr.len()");
-            return Err(format!("Args({}) not provide enough: {:?}",
+            return Err(format!("Args(<{}>) not provide enough: {:?}",
                                a.name_get(),
                                &argstr[argstr_used_len..]));
         }
@@ -494,7 +499,7 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
     if !args.is_empty() && argstr.is_empty() {
         for idx in 0..args.len() {
             if !args[idx].is_optional() && args[idx].value.as_ref().default().is_none() {
-                let e = format!("Args({}) not provide", args[idx].name_get());
+                let e = format!("Args(<{}>) not provide", args[idx].name_get());
                 return Err(e);
             }
         }
@@ -511,7 +516,7 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
         } else if args[0].is_optional() {
             args[0].parse(argstr.as_slice())?;
         } else {
-            let e = format!("Args({}): \"{:?}\" not provide enough",
+            let e = format!("Args(<{}>): \"{:?}\" not provide enough",
                             args[0].name_get(),
                             argstr.as_slice());
             return Err(e);

@@ -112,7 +112,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut String {
     }
     fn check(&self, opt_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("OPTION({})'s value missing", opt_name))
+            Err(format!("OPTION(<{}>) missing", opt_name))
         } else {
             Ok(())
         }
@@ -133,7 +133,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut char {
         if msg.len() == 1 {
             **self = msg.chars().next().unwrap();
         } else {
-            return Err(format!("OPTION({}) parse<char> fails: \"{}\"", opt_name, msg));
+            return Err(format!("OPTION(<{}>) parse<char> fails: \"{}\"", opt_name, msg));
         }
         Ok(())
     }
@@ -156,7 +156,7 @@ macro_rules! add_impl {
     }
     fn parse(&mut self, opt_name : String, msg: &str) -> Result<(), String> {
         **self = msg.parse::<$t>()
-                .map_err(|_| format!("OPTION({}) parse<{}> fails: \"{}\"", opt_name, stringify!($t),msg))?;
+                .map_err(|_| format!("OPTION(<{}>) parse<{}> fails: \"{}\"", opt_name, stringify!($t),msg))?;
         Ok(())
     }
     fn check(&self, _ :  &str) -> Result<(), String> {
@@ -183,13 +183,13 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<char> {
         if msg.len() == 1 {
             **self = Some(msg.chars().next().unwrap());
         } else {
-            return Err(format!("OPTION({}) parse<char> fails: \"{}\"", opt_name, msg));
+            return Err(format!("OPTION(<{}>) parse<char> fails: \"{}\"", opt_name, msg));
         }
         Ok(())
     }
     fn check(&self, opt_name: &str) -> Result<(), String> {
         if self.is_none() {
-            Err(format!("OPTION({})'s value missing", opt_name))
+            Err(format!("OPTION(<{}>) missing", opt_name))
         } else {
             Ok(())
         }
@@ -212,7 +212,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<String> {
     }
     fn check(&self, opt_name: &str) -> Result<(), String> {
         if self.is_none() {
-            Err(format!("OPTION({})'s value missing", opt_name))
+            Err(format!("OPTION(<{}>) missing", opt_name))
         } else {
             Ok(())
         }
@@ -234,7 +234,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<$t> {
     fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
         **self = Some(msg.parse::<$t>()
                           .map_err(|_| {
-                                       format!("OPTION({}) parse<{}> fails: \"{}\"",
+                                       format!("OPTION(<{}>) parse<{}> fails: \"{}\"",
                                                opt_name,
                                                stringify!($t),
                                                msg)
@@ -243,7 +243,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<$t> {
     }
     fn check(&self, opt_name: &str) -> Result<(), String> {
         if self.is_none() {
-            Err(format!("OPTION({})'s value missing", opt_name))
+            Err(format!("OPTION(<{}>) missing", opt_name))
         } else {
             Ok(())
         }
@@ -315,7 +315,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<String> {
     }
     fn check(&self, opt_name: &str) -> Result<(), String> {
         if self.is_empty() {
-            Err(format!("OPTION({})'s value missing", opt_name))
+            Err(format!("OPTION(<{}>) missing", opt_name))
         } else {
             Ok(())
         }
@@ -349,7 +349,7 @@ macro_rules! add_vec_impl {
                 for str in &vs {
                     self.push(str.parse::<$t>()
                                .map_err(|_| {
-                                            format!("OPTION({}) parse<Vec<{}>> fails: \"{}/{}\"",
+                                            format!("OPTION(<{}>) parse<Vec<{}>> fails: \"{}/{}\"",
                                                     opt_name,
                                                     stringify!($t),
                                                     str,
@@ -360,7 +360,7 @@ macro_rules! add_vec_impl {
     }
     fn check(&self, opt_name: &str) -> Result<(), String> {
         if self.is_empty() {
-          Err(format!("OPTION({})'s value missing", opt_name))
+          Err(format!("OPTION(<{}>) missing", opt_name))
         } else {
             Ok(())
         }

@@ -33,7 +33,7 @@ fn main() {
             .helps
             .cmd_usages
             .get_mut(&None)
-            .map(|s| *s = "USAGE: \n   http [options] [PATH...]\n   http -p <port> [PATH...]\n   http --port <port> [PATH...]".to_owned())
+            .map(|s| *s = "USAGE: \n   http [options] [<PATH>...]\n   http -p <port> [<PATH>...]\n   http --port <port> [<PATH>...]".to_owned())
             .unwrap();
         app.parse_args();
     }
