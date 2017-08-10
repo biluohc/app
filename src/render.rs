@@ -53,7 +53,7 @@ impl<'app> App<'app> {
     }
     // CMD_INFO
     fn _help_info(&self, cmd_name: Option<&str>, cmd_key: &Option<String>, blanks0: usize) -> String {
-        let version_or_subcmd = cmd_name.unwrap_or(self.helper.version()).trim();
+        let version_or_subcmd = cmd_name.unwrap_or_else(||self.helper.version()).trim();
         format!("{}{}{}\n{}",
                 self.helper.name.trim(),
                 blanks_fix(blanks0),
@@ -77,14 +77,14 @@ impl<'app> App<'app> {
         if !self.helper.addrs.is_empty() {
             authors.push_str("ADDRESS:\n");
             for &(ref author, ref email) in &self.helper.addrs {
-                authors.push_str(&&format!("{}{}: {}\n", blanks_fix(blanks0), author, email));
+                authors.push_str(&format!("{}{}: {}\n", blanks_fix(blanks0), author, email));
             }
         }
         authors
     }
     // CAMMANDS
     fn _help_sub_cmds(&self, blanks0: usize, blanks1: usize) -> String {
-        let mut cammands = "".to_owned();
+        let mut cammands = String::new();
         let mut max_len = 0;
         let mut vs: Vec<String> = vec![];
         self.cmds
@@ -93,7 +93,7 @@ impl<'app> App<'app> {
                      let s = cmd.name.unwrap().to_string() +
                              &cmd.short
                                   .map(|ss| format!(", {}", ss))
-                                  .unwrap_or(String::new());
+                                  .unwrap_or_default();
 
                      if s.len() > max_len {
                          max_len = s.len()
@@ -118,7 +118,7 @@ impl<'app> App<'app> {
     //CMD_USAGE
     fn _help_usage(&self, cmd_name: Option<&str>, cmd_key: &Option<String>, blanks0: usize) -> String {
         let pkg = &self.helper.name;
-        let none_or_cmdname = cmd_name.map(|s| format!(" {}", s)).unwrap_or("".to_owned());
+        let none_or_cmdname = cmd_name.map(|s| format!(" {}", s)).unwrap_or_default();
         let cmd = &self.cmds[cmd_key];
         let mut usages = Vec::new();
 

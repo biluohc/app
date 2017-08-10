@@ -4,47 +4,64 @@
 [![Downloads of latest version](https://img.shields.io/crates/dv/app.svg)](https://crates.io/crates/app)
 [![Documentation](https://docs.rs/app/badge.svg)](https://docs.rs/app)
 
-# [app](https://github.com/biluohc/app)
+## [app](https://github.com/biluohc/app)
 
-## A easy-to-use command-line-parser written for Rust.
+### A easy-to-use command-line-parser written for Rust.
 
-## Usage
+### Usage
 Cargo.toml
 
 ```toml
-    [dependencies]  
-    app = "0.6.0" 
+    [dependencies]
+    app = "0.6.0"
 ```
-## Or 
+### Or
 
 ```toml
-    [dependencies]  
+    [dependencies]
     app = { git = "https://github.com/biluohc/app",branch = "master", version = "0.6.0" }
 ```
 
-## Documentation  
-* Visit [Docs.rs](https://docs.rs/app/)  
-or 
+### Documentation
+* Visit [Docs.rs](https://docs.rs/app/)
+or
 * Run `cargo doc --open` after modified the toml file.
 
-## Examples
-* Options and Args: [fht2p](https://github.com/biluohc/app/blob/master/examples/fht2p.rs)
+### Examples
+* [fht2p](https://github.com/biluohc/app/blob/master/examples/fht2p.rs): Options and Args
+
 ```rustful
     git clone https://github.com/biluohc/app
     cd app
     cargo run --example fht2p -- -h
 ```
-* MultiArgs: [cp](https://github.com/biluohc/app/blob/master/examples/cp.rs)
+* [cp](https://github.com/biluohc/app/blob/master/examples/cp.rs): Options and `Multi_Args`
+
 ```rustful
     git clone https://github.com/biluohc/app
     cd app
     cargo run --example cp
 ```
 
-* Sub_`Commands`: [zipcs](https://github.com/biluohc/app/blob/master/examples/zipcs.rs)
+* [zipcs](https://github.com/biluohc/app/blob/master/examples/zipcs.rs): `Sub_Commands, OptValue and OptValueParse`
+
 ```rustful
     git clone https://github.com/biluohc/app
     cd app
     cargo run --example zipcs
 ```
+* [http](https://github.com/biluohc/app/blob/master/examples/http.rs): Custom `Helps`
 
+```rustful
+    git clone https://github.com/biluohc/app
+    cd app
+    cargo run --example http
+```
+
+* [`sort_key`](https://github.com/biluohc/app/blob/master/examples/sort_key.rs): Option's order in help message
+
+```rustful
+    git clone https://github.com/biluohc/app
+    cd app
+    cargo run --example http
+```

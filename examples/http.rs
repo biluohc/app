@@ -37,10 +37,10 @@ fn main() {
             .unwrap();
         app.parse_args();
     }
-    fun(http);
+    fun(&http);
 }
 
-fn fun(http: Http) {
+fn fun(http: &Http) {
     println!("{:?}", http);
     // do something
 }

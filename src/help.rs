@@ -14,7 +14,7 @@ trait FixStyle {
 impl<'a> FixStyle for &'a str {
     fn fix_style(&self) -> String {
         if self.trim().is_empty() {
-            "".to_owned()
+            String::new()
         } else {
             format!("\n{}\n", self.trim())
         }
@@ -23,7 +23,7 @@ impl<'a> FixStyle for &'a str {
 impl FixStyle for String {
     fn fix_style(&self) -> String {
         if self.trim().is_empty() {
-            "".to_owned()
+            String::new()
         } else {
             format!("\n{}\n", self.trim())
         }
@@ -106,7 +106,7 @@ pub struct Helper {
     temp_dir: String,
     //  current_cmd
     current_cmd: Option<String>, //main is None
-    current_cmd_sort_key:  Option<String>,
+    current_cmd_sort_key: Option<String>,
     pub helps: Helps,
 }
 
@@ -181,13 +181,12 @@ impl Helper {
     pub fn err_exit<E>(&self, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.err(error), statics::ERROR_LINE_COLOR_get()
-);
+        self.err_line_print(&self.err(error), statics::ERROR_LINE_COLOR_get());
         exit(status);
     }
     /// print error message line(2) with Red color(fg)
     #[inline]
-    pub fn err_line_print(&self, msg: &str, line_color:u16) {
+    pub fn err_line_print(&self, msg: &str, line_color: u16) {
         for (i, line) in msg.trim().lines().enumerate() {
             if i == 1 {
                 let mut t = term::stderr().unwrap();
@@ -240,7 +239,8 @@ impl Helper {
     pub fn help_cmd_err_exit<E>(&self, cmd_name: &Option<String>, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.help_cmd_err(cmd_name, error), statics::ERROR_LINE_COLOR_get());
+        self.err_line_print(&self.help_cmd_err(cmd_name, error),
+                            statics::ERROR_LINE_COLOR_get());
         exit(status);
     }
 }

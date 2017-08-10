@@ -52,6 +52,14 @@ or
     cd app
     cargo run --example http
 ```
+
+* [`sort_key`](https://github.com/biluohc/app/blob/master/examples/sort_key.rs): Option's order in help message
+
+```rustful
+    git clone https://github.com/biluohc/app
+    cd app
+    cargo run --example http
+```
 */
 
 #[macro_use]
@@ -161,10 +169,8 @@ impl<'app> App<'app> {
         if self.str_to_key.insert(name.clone().unwrap(),key.clone()).is_some() {
             panic!("Cmd: \"{:?}\" already defined",name.as_ref().unwrap());
         }
-        if short.is_some() {
-            if self.str_to_key.insert(short.clone().unwrap(),key.clone()).is_some() {
+        if short.is_some()&& self.str_to_key.insert(short.clone().unwrap(),key.clone()).is_some() {
             panic!("Cmd's short: \"{:?}\" already defined",short.as_ref().unwrap());
-        }
         }
         if self.cmds.insert(key.clone(), cmd).is_some() {
             panic!("Cmd(or it's sort_key): \"{:?}\" already defined",key);
@@ -235,7 +241,7 @@ impl<'app> App<'app> {
              for (i, arg) in args.iter().enumerate() {
                 if let Some(a)= self.str_to_key.get(arg) {
                         idx = i;
-                        self.helper.current_cmd = self.cmds[&a].name.map(|s|s.to_string());                        
+                        self.helper.current_cmd = self.cmds[a].name.map(|s|s.to_string());                        
                         self.helper.current_cmd_sort_key = a.clone();
                         break ;
                 }
@@ -346,7 +352,7 @@ impl<'app> Cmd<'app> {
     pub fn new<'s: 'app>(name: &'s str) -> Self {
         let mut c = Self::default();
         c.allow_zero_args = true;
-        c.name = Some(name.clone());
+        c.name = Some(name);
         c.sort_key = Some(name);
         c.add_help(unsafe { &mut HELP_SUBCMD })
     }
@@ -566,7 +572,7 @@ impl<'app> Opt<'app> {
     {
         Opt {
             value: value.into(),
-            name: name.clone(),
+            name: name,
             sort_key:name,
             optional: false,
             short: None,
