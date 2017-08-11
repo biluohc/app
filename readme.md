@@ -50,13 +50,6 @@ or
     cd app
     cargo run --example zipcs
 ```
-* [http](https://github.com/biluohc/app/blob/master/examples/http.rs): Custom `Helps`
-
-```rustful
-    git clone https://github.com/biluohc/app
-    cd app
-    cargo run --example http
-```
 
 * [`sort_key`](https://github.com/biluohc/app/blob/master/examples/sort_key.rs): Option's order in help message
 
@@ -64,4 +57,12 @@ or
     git clone https://github.com/biluohc/app
     cd app
     cargo run --example http
+```
+
+* [cargo-http](https://github.com/biluohc/app/blob/master/examples/cargo-http.rs): Custom `Helps` and `cargo subcmd`
+
+```rustful
+    git clone https://github.com/biluohc/app
+    cd app
+    cargo run --example cargo-http
 ```

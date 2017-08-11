@@ -1,13 +1,3 @@
-impl AsMut<Helps> for Helper {
-    fn as_mut(&mut self) -> &mut Helps {
-        &mut self.helps
-    }
-}
-impl AsRef<Helps> for Helper {
-    fn as_ref(&self) -> &Helps {
-        &self.helps
-    }
-}
 trait FixStyle {
     fn fix_style(&self) -> String;
 }
@@ -107,7 +97,7 @@ pub struct Helper {
     //  current_cmd
     current_cmd: Option<String>, //main is None
     current_cmd_sort_key: Option<String>,
-    pub helps: Helps,
+    helps: Helps,
 }
 
 impl Helper {
@@ -154,6 +144,12 @@ impl Helper {
     }
     pub fn temp_dir(&self) -> &String {
         &self.temp_dir
+    }
+    pub fn as_helps(&self)->&Helps{
+        &self.helps
+    }
+    pub fn as_mut_helps(&mut self)->&mut Helps{
+        &mut self.helps
     }
 }
 

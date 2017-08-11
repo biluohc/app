@@ -45,13 +45,6 @@ or
     cd app
     cargo run --example zipcs
 ```
-* [http](https://github.com/biluohc/app/blob/master/examples/http.rs): Custom `Helps`
-
-```rustful
-    git clone https://github.com/biluohc/app
-    cd app
-    cargo run --example http
-```
 
 * [`sort_key`](https://github.com/biluohc/app/blob/master/examples/sort_key.rs): Option's order in help message
 
@@ -59,6 +52,14 @@ or
     git clone https://github.com/biluohc/app
     cd app
     cargo run --example http
+```
+
+* [cargo-http](https://github.com/biluohc/app/blob/master/examples/cargo-http.rs): Custom `Helps` and `cargo subcmd`
+
+```rustful
+    git clone https://github.com/biluohc/app
+    cd app
+    cargo run --example cargo-http
 ```
 */
 
@@ -83,6 +84,7 @@ use std::default::Default;
 use std::io::prelude::*;
 use std::process::exit;
 use std::fmt::Display;
+use std::path::PathBuf;
 use std::env;
 
 static mut HELP: bool = false;
@@ -95,7 +97,7 @@ pub struct App<'app> {
     // None is main
     cmds: Map<Option<String>, Cmd<'app>>, // key, Cmd
     str_to_key: Map<String, Option<String>>, // cmd/cmd_short, key
-    pub helper: Helper,
+    helper: Helper,
 }
 
 impl<'app> App<'app> {
@@ -194,13 +196,93 @@ impl<'app> App<'app> {
         self
     }
 }
+
 impl<'app> App<'app> {
     /// build `Helper` for custom `Helps`
     ///
-    /// You can modify `app.helper.helps.xxx`
+    /// You can modify `Helps.xxx` by `app.as_mut_helps()`
     pub fn build_helper(mut self) -> Self {
         self._build_helper();
         self
+    }
+    pub fn as_mut_helps(&mut self) -> &mut Helps {
+        &mut self.helper.helps
+    }
+    /**    
+    If the binary being calling as subcommand by cargo,
+
+    You should `fix_helps_for_cargo()` and
+
+    use `parse_args_for_cargo()` to replace `parse_args()`
+
+    **Notice**:
+
+    Your binary file have to name like 'cargo-xxx',
+
+    if you want to call it by `xxx`,
+
+    you can `ln -s cargo-xxx xxx` in your `$CARGO-HOME/bin(~/.cargo/bin)`
+    */
+    pub fn as_cargo_subcmd() -> bool {
+        let cargo_home_bin = env::var("CARGO_HOME")
+            .map(PathBuf::from)
+            .map(|mut p| {
+                     p.push("bin");
+                     p
+                 });
+        let current_exe_dir = env::current_exe().map(|mut s| {
+                                                         s.pop();
+                                                         s
+                                                     });
+        dbln!("$CARGO_HOME: {:?}", cargo_home_bin);
+        dbln!("$current_exe_dir: {:?}", current_exe_dir);
+        cargo_home_bin
+            .map(|sc| current_exe_dir.map(|se| se == sc))
+            .map(|ob| ob.unwrap_or_default())
+            .unwrap_or_default()
+    }
+    pub fn fix_helps_for_cargo(&mut self) {
+        self.as_mut_helps().version.insert_str(0, "cargo-");
+        self.as_mut_helps()
+            .cmd_infos
+            .values_mut()
+            .map(|v| v.insert_str(0, "cargo-"))
+            .count();
+        self.as_mut_helps()
+            .cmd_usages
+            .get_mut(&None)
+            .map(|s| {
+                let prefix_blanks_ends_idx = |s: &str| {
+                    let mut len = 0;
+                    for c in s.chars() {
+                        if c == ' ' {
+                            len += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    len
+                };
+                let mut usage = String::default();
+                for (idx, ss) in s.lines().enumerate() {
+                    if idx == 0 {
+                        usage.push_str(ss);
+                    } else {
+                        usage.push('\n');
+                        usage.push_str(&ss[..prefix_blanks_ends_idx(ss)]);
+                        usage.push_str("cargo ");
+                        usage.push_str(&ss[prefix_blanks_ends_idx(ss)..]);
+                    }
+                }
+                dbln!("{}", usage);
+                *s = usage;
+            })
+            .unwrap()
+    }
+    /// `parse(std::env::args()[2..])` and `exit(1)` if parse fails.
+    pub fn parse_args_for_cargo(self) -> Helper {
+        let args: Vec<String> = env::args().skip(2).collect();
+        self.parse(&args[..])
     }
     /// `parse(std::env::args()[1..])` and `exit(1)` if parse fails.
     pub fn parse_args(self) -> Helper {
@@ -482,22 +564,20 @@ impl<'app> Cmd<'app> {
                         } else {
                             i += 1;
                         }
-                    } else {
-                        if let Some(opt_key) = self.str_to_key.get(s.as_str()) {
-                            let mut opt = self.opts.get_mut(opt_key).unwrap();
-                            let opt_is_bool = opt.is_bool();
-                            if !opt_is_bool && args.len() > i + 1 {
-                                opt.parse(&args[i + 1])?;
-                                i += 2;
-                            } else if opt_is_bool {
-                                opt.parse("")?;
-                                i += 1;
-                            } else {
-                                return Err(format!("OPTION({})'s value missing", s));
-                            }
+                    } else if let Some(opt_key) = self.str_to_key.get(s.as_str()) {
+                        let mut opt = self.opts.get_mut(opt_key).unwrap();
+                        let opt_is_bool = opt.is_bool();
+                        if !opt_is_bool && args.len() > i + 1 {
+                            opt.parse(&args[i + 1])?;
+                            i += 2;
+                        } else if opt_is_bool {
+                            opt.parse("")?;
+                            i += 1;
                         } else {
-                            return Err(format!("OPTION: {:?} is undefined", s));
+                            return Err(format!("OPTION({})'s value missing", s));
                         }
+                    } else {
+                        return Err(format!("OPTION: {:?} is undefined", s));
                     }
                 }
                 s => {

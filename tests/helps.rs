@@ -40,8 +40,7 @@ fn fun(args: &str) {
                      .short('u')
                      .long("user")
                      .help("Sets user information"))
-            .args(Args::new("PATHS", &mut fht2p.dirs)
-                      .help(r#"Sets the path to share"#))
+            .args(Args::new("PATHS", &mut fht2p.dirs).help(r#"Sets the path to share"#))
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
                      .opt(Opt::new("home", &mut fht2p.run.home)
@@ -78,7 +77,7 @@ fn fun(args: &str) {
     }
     println!("----------------------app -v/--version--------------------");
     println!("{}", helper.ver().trim());
-    for k in helper.helps.cmd_infos.keys() {
+    for k in helper.as_helps().cmd_infos.keys() {
         println!("----------------------app {:?}--------------------\n{}",
                  k,
                  helper.help_cmd(k).trim());

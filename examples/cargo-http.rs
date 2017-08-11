@@ -28,18 +28,22 @@ fn main() {
                      .help("Sets listenning port"))
             .args(Args::new("PATH", &mut http.paths).help("Sets the path to share"))
             .build_helper();
-        app.helper
-            .helps
+        app.as_mut_helps()
             .cmd_usages
             .get_mut(&None)
             .map(|s| *s = "USAGE: \n   http [options] [<PATH>...]\n   http -p <port> [<PATH>...]\n   http --port <port> [<PATH>...]".to_owned())
             .unwrap();
-        app.parse_args();
+        if App::as_cargo_subcmd() {
+            app.fix_helps_for_cargo();
+            app.parse_args_for_cargo();
+        } else {
+            app.parse_args();
+        }
     }
     fun(&http);
 }
 
 fn fun(http: &Http) {
-    println!("{:?}", http);
+    println!("Http: {:?}", http);
     // do something
 }
