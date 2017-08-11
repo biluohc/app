@@ -94,7 +94,7 @@ static mut VERSION: bool = false;
 pub struct App<'app> {
     // None is main
     cmds: Map<Option<String>, Cmd<'app>>, // key, Cmd
-    str_to_key: Map<String,Option<String>>, // cmd/cmd_short, key
+    str_to_key: Map<String, Option<String>>, // cmd/cmd_short, key
     pub helper: Helper,
 }
 
@@ -166,14 +166,20 @@ impl<'app> App<'app> {
         let name = cmd.name.map(|s| s.to_string());
         let short = cmd.short.map(|s| s.to_string());
         let key = cmd.sort_key.map(|s| s.to_string());
-        if self.str_to_key.insert(name.clone().unwrap(),key.clone()).is_some() {
-            panic!("Cmd: \"{:?}\" already defined",name.as_ref().unwrap());
+        if self.str_to_key
+               .insert(name.clone().unwrap(), key.clone())
+               .is_some() {
+            panic!("Cmd: \"{:?}\" already defined", name.as_ref().unwrap());
         }
-        if short.is_some()&& self.str_to_key.insert(short.clone().unwrap(),key.clone()).is_some() {
-            panic!("Cmd's short: \"{:?}\" already defined",short.as_ref().unwrap());
+        if short.is_some() &&
+           self.str_to_key
+               .insert(short.clone().unwrap(), key.clone())
+               .is_some() {
+            panic!("Cmd's short: \"{:?}\" already defined",
+                   short.as_ref().unwrap());
         }
         if self.cmds.insert(key.clone(), cmd).is_some() {
-            panic!("Cmd(or it's sort_key): \"{:?}\" already defined",key);
+            panic!("Cmd(or it's sort_key): \"{:?}\" already defined", key);
         }
         self
     }
@@ -238,17 +244,17 @@ impl<'app> App<'app> {
         self.helper.temp_dir = env::temp_dir().to_string_lossy().into_owned();
         let mut idx = std::usize::MAX; // cmd_idx
         {
-             for (i, arg) in args.iter().enumerate() {
-                if let Some(a)= self.str_to_key.get(arg) {
-                        idx = i;
-                        self.helper.current_cmd = self.cmds[a].name.map(|s|s.to_string());                        
-                        self.helper.current_cmd_sort_key = a.clone();
-                        break ;
+            for (i, arg) in args.iter().enumerate() {
+                if let Some(a) = self.str_to_key.get(arg) {
+                    idx = i;
+                    self.helper.current_cmd = self.cmds[a].name.map(|s| s.to_string());
+                    self.helper.current_cmd_sort_key = a.clone();
+                    break;
                 }
             }
         }
         // -h/--help
-        if let Some(s) = strings_idx(&args[..], "-h", "--help") {
+        if let Some(s) = strings_idx(&args[..], 'h', "--help") {
             if idx != std::usize::MAX && idx < s {
                 self.helper.current_cmd_ref().to_app_rest()?;
             } else {
@@ -257,28 +263,45 @@ impl<'app> App<'app> {
             }
         }
         // -v/--version
-        if let Some(s) = strings_idx(&args[..], "-V", "--version") {
+        if let Some(s) = strings_idx(&args[..], 'V', "--version") {
             if idx >= s {
                 return Err(AppError::Version);
             }
         }
-        fn strings_idx(ss: &[String], msg0: &str, msg1: &str) -> Option<usize> {
+        fn strings_idx(ss: &[String], msg0: char, msg1: &str) -> Option<usize> {
             for (idx, arg) in ss.iter().enumerate() {
-                if arg == msg0 || arg == msg1 {
+                if flag_contains(arg, &msg0) || arg == msg1 {
                     return Some(idx);
                 }
             }
+            #[inline]
+            fn flag_contains(arg: &str, flag: &char) -> bool {
+                if arg.starts_with('-') && !arg.starts_with("--") {
+                    for s in arg.chars() {
+                        if s == *flag {
+                            return true;
+                        }
+                    }
+                }
+                false
+            }
             None
         }
-        let app_has_subcmds = self.cmds.len()>1;
+        let app_has_subcmds = self.cmds.len() > 1;
         if idx != std::usize::MAX {
-            self.cmds.get_mut(&None).unwrap().parse(&args[0..idx], &app_has_subcmds)?;
+            self.cmds
+                .get_mut(&None)
+                .unwrap()
+                .parse(&args[0..idx], &app_has_subcmds)?;
             self.cmds
                 .get_mut(&self.helper.current_cmd_sort_key)
                 .unwrap()
-                .parse(&args[idx + 1..],&app_has_subcmds)?;
+                .parse(&args[idx + 1..], &app_has_subcmds)?;
         } else {
-            self.cmds.get_mut(&None).unwrap().parse(&args[..],&app_has_subcmds)?;
+            self.cmds
+                .get_mut(&None)
+                .unwrap()
+                .parse(&args[..], &app_has_subcmds)?;
         }
         // check main
         self.check(&None)?;
@@ -334,16 +357,16 @@ impl<'app> Cmd<'app> {
     /// `default` and add `-h/--help` `Opt`
     fn add_help(self, b: &'static mut bool) -> Self {
         self.opt(Opt::new("help", b)
-                    .sort_key(statics::OPT_HELP_SORT_KEY_get())
-                     .short("h")
+                     .sort_key(statics::OPT_HELP_SORT_KEY_get())
+                     .short('h')
                      .long("help")
                      .help("Show the help message"))
     }
     /// add `-v/version` `Opt`
     fn add_version(self) -> Self {
         self.opt(Opt::new("version", unsafe { &mut VERSION })
-                    .sort_key(statics::OPT_VERSION_SORT_KEY_get())
-                     .short("V")
+                     .sort_key(statics::OPT_VERSION_SORT_KEY_get())
+                     .short('V')
                      .long("version")
                      .help("Show the version message"))
 
@@ -356,13 +379,13 @@ impl<'app> Cmd<'app> {
         c.sort_key = Some(name);
         c.add_help(unsafe { &mut HELP_SUBCMD })
     }
-    pub fn short<'s: 'app>(mut self,short: &'s str) -> Self {
-        self.short=Some(short);
+    pub fn short<'s: 'app>(mut self, short: &'s str) -> Self {
+        self.short = Some(short);
         self
     }
     /// Default is `Cmd`'s name
-    pub fn sort_key(mut self,sort_key: &'app str)->Self {
-        self.sort_key =Some(sort_key);
+    pub fn sort_key(mut self, sort_key: &'app str) -> Self {
+        self.sort_key = Some(sort_key);
         self
     }
     /// description
@@ -380,7 +403,7 @@ impl<'app> Cmd<'app> {
         let long = opt.long_get();
         let short = opt.short_get();
         let name = opt.name_get();
-        let key = opt.sort_key_get().to_string();        
+        let key = opt.sort_key_get().to_string();
         if long.is_none() && short.is_none() {
             panic!("OPTION: \"{}\" don't have --{} and -{} all",
                    name,
@@ -407,7 +430,7 @@ impl<'app> Cmd<'app> {
         self.allow_zero_args = allow;
         self
     }
-    fn parse(&mut self, args: &[String],app_has_subcmds:&bool) -> Result<(), String> {
+    fn parse(&mut self, args: &[String], app_has_subcmds: &bool) -> Result<(), String> {
         let mut args_vec: Vec<String> = Vec::new();
         let mut i = 0;
         for _ in 0..args.len() {
@@ -435,20 +458,46 @@ impl<'app> Cmd<'app> {
                     }
                 }
                 s if s.starts_with('-') && s != "-" && s != "--" => {
-                    if let Some(opt_key) = self.str_to_key.get(s.as_str()) {
-                        let mut opt = self.opts.get_mut(opt_key).unwrap();
-                        let opt_is_bool = opt.is_bool();
-                        if !opt_is_bool && args.len() > i + 1 {
-                            opt.parse(&args[i + 1])?;
+                    if s.chars().count() > 2 {
+                        let flags: Vec<String> = s[1..].chars().map(|c| format!("-{}", c)).collect();
+                        let mut last_flag_is_not_bool = false;
+                        for idx in 0..flags.len() {
+                            if let Some(opt_key) = self.str_to_key.get(flags[idx].as_str()) {
+                                let mut opt = self.opts.get_mut(opt_key).unwrap();
+                                let opt_is_bool = opt.is_bool();
+                                if !opt_is_bool && args.len() > i + 1 && idx + 1 == flags.len() {
+                                    opt.parse(&args[i + 1])?;
+                                    last_flag_is_not_bool = true;
+                                } else if opt_is_bool {
+                                    opt.parse("")?;
+                                } else {
+                                    return Err(format!("OPTION({})'s value missing", flags[idx]));
+                                }
+                            } else {
+                                return Err(format!("OPTION: {:?} is undefined", flags[idx]));
+                            }
+                        }
+                        if last_flag_is_not_bool {
                             i += 2;
-                        } else if opt_is_bool {
-                            opt.parse("")?;
-                            i += 1;
                         } else {
-                            return Err(format!("OPTION({})'s value missing", s));
+                            i += 1;
                         }
                     } else {
-                        return Err(format!("OPTION: \"{}\" is undefined", s));
+                        if let Some(opt_key) = self.str_to_key.get(s.as_str()) {
+                            let mut opt = self.opts.get_mut(opt_key).unwrap();
+                            let opt_is_bool = opt.is_bool();
+                            if !opt_is_bool && args.len() > i + 1 {
+                                opt.parse(&args[i + 1])?;
+                                i += 2;
+                            } else if opt_is_bool {
+                                opt.parse("")?;
+                                i += 1;
+                            } else {
+                                return Err(format!("OPTION({})'s value missing", s));
+                            }
+                        } else {
+                            return Err(format!("OPTION: {:?} is undefined", s));
+                        }
                     }
                 }
                 s => {
@@ -457,9 +506,8 @@ impl<'app> Cmd<'app> {
                 }
             }
         }
-        if self.name .is_none()&& *app_has_subcmds && self.args.is_empty()&& !args_vec.is_empty() {
-            return Err(format!("Command: {:?} is undefined", args_vec[0])
-            );
+        if self.name.is_none() && *app_has_subcmds && self.args.is_empty() && !args_vec.is_empty() {
+            return Err(format!("Command: {:?} is undefined", args_vec[0]));
         }
         args_handle(&mut self.args, &args_vec[..])?;
         Ok(())
@@ -542,10 +590,10 @@ fn args_rec(args: &mut [Args], mut argstr: ElesRef<String>) -> Result<(), String
 #[derive(Debug)]
 pub struct Opt<'app> {
     name: &'app str,
-    sort_key:&'app str,
+    sort_key: &'app str,
     value: OptValue<'app>,
     optional: bool,
-    short: Option<&'app str>,
+    short: Option<char>,
     long: Option<&'app str>,
     help: &'app str,
 }
@@ -573,7 +621,7 @@ impl<'app> Opt<'app> {
         Opt {
             value: value.into(),
             name: name,
-            sort_key:name,
+            sort_key: name,
             optional: false,
             short: None,
             long: None,
@@ -581,7 +629,7 @@ impl<'app> Opt<'app> {
         }
     }
     /// Default is `Opt`'s name
-    pub fn sort_key(mut self,sort_key: &'app str)->Self {
+    pub fn sort_key(mut self, sort_key: &'app str) -> Self {
         self.sort_key = sort_key;
         self
     }
@@ -593,7 +641,7 @@ impl<'app> Opt<'app> {
         self
     }
     /// short
-    pub fn short(mut self, short: &'app str) -> Self {
+    pub fn short(mut self, short: char) -> Self {
         self.short = Some(short);
         self
     }
@@ -633,7 +681,7 @@ impl<'app> Opt<'app> {
         self.sort_key
     }
     pub fn short_get(&self) -> Option<String> {
-        self.short.map(|s| "-".to_owned() + s)
+        self.short.map(|s| format!("-{}", s))
     }
     pub fn long_get(&self) -> Option<String> {
         self.long.map(|s| "--".to_owned() + s)

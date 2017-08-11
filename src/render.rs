@@ -145,6 +145,8 @@ impl<'app> App<'app> {
                 };
                 if args.optional || args.value.as_ref().default().is_some() {
                     fmt_ = format!("[{}] ", fmt_);
+                }else {
+                    fmt_.push(' ');
                 }
                 argss.push_str(&fmt_);
             })

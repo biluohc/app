@@ -29,37 +29,36 @@ fn fun(args: &str) {
             .author("Xyz.org", "moz@mio.org")
             .addr("GitHub", "https://biluohc.github.com/fht2p")
             .opt(Opt::new("keep-alive", &mut fht2p.keep_alive)
-                     .short("k")
+                     .short('k')
                      .long("keep-alive")
                      .help("open keep-alive"))
             .opt(Opt::new("ports", &mut fht2p.ports)
-                     .short("p")
+                     .short('p')
                      .long("port")
                      .help("Sets listenning port"))
             .opt(Opt::new("user", &mut fht2p.user)
-                     .optional()
-                     .short("u")
+                     .short('u')
                      .long("user")
                      .help("Sets user information"))
             .args(Args::new("PATHS", &mut fht2p.dirs)
-                      .optional()
-                      .help(r#"Sets the paths to share(default is "./")"#))
+                      .help(r#"Sets the path to share"#))
             .cmd(Cmd::new("run")
                      .desc("run the sub_cmd")
                      .opt(Opt::new("home", &mut fht2p.run.home)
-                              .short("home")
+                              .short('H')
                               .long("home")
                               .help("running in the home"))
                      .opt(Opt::new("log", &mut fht2p.run.log)
-                              .long("log")
+                              .long("long")
+                              .short('l')
                               .help("running and print log")))
             .cmd(Cmd::new("build")
                      .desc("build the file")
                      .opt(Opt::new("release", &mut fht2p.build.release)
-                              .short("r")
+                              .short('r')
                               .long("release")
                               .help("Build artifacts in release mode, with optimizations"))
-                     .args(Args::new("Files", &mut fht2p.build.files).help("Files to build")))
+                     .args(Args::new("File", &mut fht2p.build.files).help("File to build")))
             .parse(&args[..])
     };
     println!("{:?}", helper.current_cmd_ref());
@@ -136,18 +135,18 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut User {
         self.address.clear();
         let vs: Vec<&str> = msg.split(',').filter(|s| !s.is_empty()).collect();
         if vs.len() != 3 {
-            return Err(format!("OPTION({}) parse<User> fails: \"{}\"", opt_name, msg));
+            return Err(format!("OPTION(<{}>) parse<User> fails: \"{}\"", opt_name, msg));
         }
         self.name.push_str(vs[0]);
         self.age = vs[1]
             .parse::<u8>()
-            .map_err(|_| format!("OPTION({}) parse<User.age> fails: \"{}\"", opt_name, msg))?;
+            .map_err(|_| format!("OPTION(<{}>) parse<User.age> fails: \"{}\"", opt_name, msg))?;
         self.address.push_str(vs[2]);
         Ok(())
     }
     fn check(&self, opt_name: &str) -> Result<(), String> {
         if self.name.is_empty() {
-            Err(format!("OPTION({})'s value missing", opt_name))
+            Err(format!("OPTION(<{}>)'s value missing", opt_name))
         } else {
             Ok(())
         }

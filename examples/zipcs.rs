@@ -14,7 +14,7 @@ pub struct Config {
 impl Config {
     pub fn parse() {
         let mut config = Self::default();
-        config.zip.outdir= "./".to_owned();
+        config.zip.outdir = "./".to_owned();
         let mut list = false;
         let charsets = format!("Sets the charset Zipcs using({})",
                                "UTF_8, UTF_16BE, UTF_16LE, GBK, GB18030, HZ, BIG5"
@@ -28,48 +28,48 @@ impl Config {
                 .desc("Useful tools collection")
                 .allow_zero_args(false)
                 .cmd(Cmd::new("zip")
-                .short("z")
-                .sort_key("a0")
+                         .short("z")
+                         .sort_key("a0")
                          .desc("Unzip with charset setting")
                          .opt(Opt::new("list", &mut list)
-                                  .short("l")
+                                  .short('l')
                                   .long("list")
                                   .help("Only list files from ZipArchives"))
                          .opt(Opt::new("charset", &mut config.zip.charset)
-                                  .short("cs")
+                                  .short('c')
                                   .long("charset")
                                   .help(&charsets))
                          .opt(Opt::new("outdir", &mut config.zip.outdir)
-                                  .short("o")
+                                  .short('o')
                                   .long("outdir")
                                   .help("Sets Output directory"))
                          .args(Args::new("ZipArchive", &mut config.zip.zips).help("ZipArchive need to unzip")))
                 .cmd(Cmd::new("ping")
-                .short("p")
-                .sort_key("a1")
+                         .short("p")
+                         .sort_key("a1")
                          .desc("ping domains/ips")
                          .opt(Opt::new("count", &mut config.ping.count)
-                                  .short("c")
+                                  .short('c')
                                   .long("count")
                                   .help("stop after sending count ECHO_REQUEST packets"))
                          .opt(Opt::new("_6", &mut config.ping._6)
-                                  .short("6")
+                                  .short('6')
                                   .help("use IPV6"))
                          .opt(Opt::new("only-line", &mut config.ping.only_line)
-                                  .short("l")
+                                  .short('l')
                                   .long("only-line")
                                   .help("print result only-line"))
                          .args(Args::new("Host/IP", &mut config.ping.hosts).help("Host or IP need to ping")))
                 .cmd(Cmd::new("url")
-                .short("l")
-                .sort_key("a2")
+                         .short("l")
+                         .sort_key("a2")
                          .desc("Urls decoding/encoding")
                          .opt(Opt::new("encode", &mut config.url.is_encode)
-                                  .short("e")
+                                  .short('e')
                                   .long("encode")
                                   .help("encode(default is decode)"))
                          .opt(Opt::new("plus", &mut config.url.is_plus)
-                                  .short("p")
+                                  .short('p')
                                   .long("plus")
                                   .help("replaces ' ' with '+'"))
                          .args(Args::new("Url", &mut config.url.strs).help("Url need to decode/encode")))
@@ -145,7 +145,7 @@ pub struct Pings {
 }
 impl Pings {
     fn call(self) {
-        //do something        
+        //do something
     }
 }
 #[derive(Debug,PartialEq)]
@@ -161,18 +161,18 @@ impl Default for Task {
 
 #[derive(Debug,Default)]
 pub struct Zips {
-    pub charset: CharSet,   //zip -cs/--charset   // utf-8
-    pub outdir: String,     //zipcs -o/--outdir   //./
-    pub zips: Vec<String>,  //zipcs [ZipArchive..]
+    pub charset: CharSet, //zip -cs/--charset   // utf-8
+    pub outdir: String, //zipcs -o/--outdir   //./
+    pub zips: Vec<String>, //zipcs [ZipArchive..]
     pub task: Task, // UNZIP
 }
 impl Zips {
     fn check(&self) -> Result<(), String> {
-        //do something        
+        //do something
         Ok(())
     }
     fn call(self) -> Result<(), String> {
-        //do something        
+        //do something
         Ok(())
     }
 }

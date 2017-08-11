@@ -32,4 +32,3 @@ pub fn OPTIONAL_get() -> &'static str {
 pub fn OPTIONAL_set(s: &'static str) {
     unsafe { OPTIONAL = s }
 }
-

@@ -19,14 +19,13 @@ fn main() {
             .addr("GitHub",
                   "https://github.com/biluohc/app/blob/master/examples/http.rs")
             .opt(Opt::new("keep-alive", &mut http.keep_alive)
-                     .short("k")
+                     .short('k')
                      .long("keep-alive")
                      .help("open keep-alive"))
             .opt(Opt::new("port", &mut http.port)
-                     .short("p")
+                     .short('p')
                      .long("port")
-                     .help("Sets listenning port")
-                     )
+                     .help("Sets listenning port"))
             .args(Args::new("PATH", &mut http.paths).help("Sets the path to share"))
             .build_helper();
         app.helper
