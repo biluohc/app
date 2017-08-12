@@ -1,6 +1,8 @@
 #![allow(dead_code)]
-use {App, Opt, Args, Cmd, OptValue, OptValueParse};
-use AppError;
+#[macro_use]
+extern crate stderr;
+extern crate app;
+use app::{App, Opt, Args, Cmd, OptValue, OptValueParse,AppError};
 
 trait IsParse {
     fn is_parse(&self) -> bool;

@@ -78,7 +78,6 @@ mod avp;
 pub use avp::{ArgsValue, ArgsValueParse};
 /// Mut Statics
 pub mod statics;
-mod test;
 
 use std::collections::BTreeMap as Map;
 use std::default::Default;
@@ -208,82 +207,6 @@ impl<'app> App<'app> {
     }
     pub fn as_mut_helps(&mut self) -> &mut Helps {
         &mut self.helper.helps
-    }
-    /**    
-    If the binary being calling as subcommand by cargo,
-
-    You should `fix_helps_for_cargo()` and
-
-    use `parse_args_for_cargo()` to replace `parse_args()`
-
-    **Notice**:
-
-    Your binary file have to name like 'cargo-xxx',
-
-    if you want to call it by `xxx`,
-
-    you can `ln -s cargo-xxx xxx` in your `$CARGO-HOME/bin(~/.cargo/bin)`
-    */
-    pub fn as_cargo_subcmd() -> bool {
-        let cargo_home_bin = env::var("CARGO_HOME")
-            .map(PathBuf::from)
-            .map(|mut p| {
-                     p.push("bin");
-                     p
-                 });
-        let current_exe_dir = env::current_exe().map(|mut s| {
-                                                         s.pop();
-                                                         s
-                                                     });
-        dbln!("$CARGO_HOME: {:?}", cargo_home_bin);
-        dbln!("$current_exe_dir: {:?}", current_exe_dir);
-        cargo_home_bin
-            .map(|sc| current_exe_dir.map(|se| se == sc))
-            .map(|ob| ob.unwrap_or_default())
-            .unwrap_or_default()
-    }
-    pub fn fix_helps_for_cargo(&mut self) {
-        self.as_mut_helps().version.insert_str(0, "cargo-");
-        self.as_mut_helps()
-            .cmd_infos
-            .values_mut()
-            .map(|v| v.insert_str(0, "cargo-"))
-            .count();
-        self.as_mut_helps()
-            .cmd_usages
-            .get_mut(&None)
-            .map(|s| {
-                let prefix_blanks_ends_idx = |s: &str| {
-                    let mut len = 0;
-                    for c in s.chars() {
-                        if c == ' ' {
-                            len += 1;
-                        } else {
-                            break;
-                        }
-                    }
-                    len
-                };
-                let mut usage = String::default();
-                for (idx, ss) in s.lines().enumerate() {
-                    if idx == 0 {
-                        usage.push_str(ss);
-                    } else {
-                        usage.push('\n');
-                        usage.push_str(&ss[..prefix_blanks_ends_idx(ss)]);
-                        usage.push_str("cargo ");
-                        usage.push_str(&ss[prefix_blanks_ends_idx(ss)..]);
-                    }
-                }
-                dbln!("{}", usage);
-                *s = usage;
-            })
-            .unwrap()
-    }
-    /// `parse(std::env::args()[2..])` and `exit(1)` if parse fails.
-    pub fn parse_args_for_cargo(self) -> Helper {
-        let args: Vec<String> = env::args().skip(2).collect();
-        self.parse(&args[..])
     }
     /// `parse(std::env::args()[1..])` and `exit(1)` if parse fails.
     pub fn parse_args(self) -> Helper {
@@ -424,6 +347,98 @@ impl<'app> App<'app> {
     }
 }
 
+
+/** 
+## About Cargo
+
+If the binary being calling as `subcommand` by `cargo`,
+
+You should call `fix_helps_for_cargo()` and use `parse_args_for_cargo()` to replace `parse_args()`.
+
+You could see the example: [cargo-http](https://github.com/biluohc/app/blob/master/examples/cargo-http.rs)
+
+## Notice:
+
+If Your `App`'s name is `xxx`, Your `crate`'s name have to name like `cargo-xxx`,
+
+and you can install it by `cargo intsall`,
+
+you can call it by `cargo xxx` or `cargo-xxx`(If it's path in the path environment variable, but is not recommended),
+
+if you want to call it by `xxx`, you can use `ln` or `cp` command.
+
+```sh
+ln -s $HOME/.cargo/bin/cargo-xxx  $HOME/.cargo/bin/xxx
+```
+or
+
+```sh
+sudo ln -s $HOME/.cargo/bin/cargo-xxx  /usr/bin/xxx
+```
+*/
+impl<'app> App<'app> {
+    pub fn as_cargo_subcmd() -> bool {
+        let cargo_home_bin = env::var("CARGO_HOME")
+            .map(PathBuf::from)
+            .map(|mut p| {
+                     p.push("bin");
+                     p
+                 });
+        let current_exe_dir = env::current_exe().map(|mut s| {
+                                                         s.pop();
+                                                         s
+                                                     });
+        dbln!("$CARGO_HOME: {:?}", cargo_home_bin);
+        dbln!("$current_exe_dir: {:?}", current_exe_dir);
+        cargo_home_bin
+            .map(|sc| current_exe_dir.map(|se| se == sc))
+            .map(|ob| ob.unwrap_or_default())
+            .unwrap_or_default()
+    }
+    pub fn fix_helps_for_cargo(&mut self) {
+        self.as_mut_helps().version.insert_str(0, "cargo-");
+        self.as_mut_helps()
+            .cmd_infos
+            .values_mut()
+            .map(|v| v.insert_str(0, "cargo-"))
+            .count();
+        self.as_mut_helps()
+            .cmd_usages
+            .get_mut(&None)
+            .map(|s| {
+                let prefix_blanks_ends_idx = |s: &str| {
+                    let mut len = 0;
+                    for c in s.chars() {
+                        if c == ' ' {
+                            len += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    len
+                };
+                let mut usage = String::default();
+                for (idx, ss) in s.lines().enumerate() {
+                    if idx == 0 {
+                        usage.push_str(ss);
+                    } else {
+                        usage.push('\n');
+                        usage.push_str(&ss[..prefix_blanks_ends_idx(ss)]);
+                        usage.push_str("cargo ");
+                        usage.push_str(&ss[prefix_blanks_ends_idx(ss)..]);
+                    }
+                }
+                dbln!("{}", usage);
+                *s = usage;
+            })
+            .unwrap()
+    }
+    /// `parse(std::env::args()[2..])` and `exit(1)` if parse fails.
+    pub fn parse_args_for_cargo(self) -> Helper {
+        let args: Vec<String> = env::args().skip(2).collect();
+        self.parse(&args[..])
+    }
+}
 /// **Command**
 #[derive(Debug,Default)]
 pub struct Cmd<'app> {
