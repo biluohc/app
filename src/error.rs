@@ -1,6 +1,7 @@
 quick_error! {
-    #[derive(Debug)]
-     enum AppError {
+    /// **AppError**
+    #[derive(Debug,PartialEq)]
+     pub enum AppError {
         Parse(err:String) {
             description("Parse Error")
             from()
@@ -15,16 +16,16 @@ quick_error! {
 }
 
 trait ToAppRest {
-    fn to_app_rest(&self) -> Result<(), AppError>;
+    fn to_app_rest(self) -> Result<(), AppError>;
 }
 
 impl<'a> ToAppRest for &'a Option<String> {
-    fn to_app_rest(&self) -> Result<(), AppError> {
+    fn to_app_rest(self) -> Result<(), AppError> {
         Err(AppError::Help((*self).clone()))
     }
 }
 impl<'a> ToAppRest for Option<String> {
-    fn to_app_rest(&self) -> Result<(), AppError> {
-        Err(AppError::Help(self.clone()))
+    fn to_app_rest(self) -> Result<(), AppError> {
+        Err(AppError::Help(self))
     }
 }

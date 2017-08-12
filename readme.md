@@ -51,7 +51,7 @@ or
     cargo run --example zipcs
 ```
 
-* [`sort_key`](https://github.com/biluohc/app/blob/master/examples/sort_key.rs): Option's order in help message
+* [`http`](https://github.com/biluohc/app/blob/master/examples/http.rs): Option's order in help message
 
 ```rustful
     git clone https://github.com/biluohc/app

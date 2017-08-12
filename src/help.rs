@@ -177,7 +177,7 @@ impl Helper {
     pub fn err_exit<E>(&self, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.err(error), statics::ERROR_LINE_COLOR_get());
+        self.err_line_print(&self.err(error), statics::error_line_color_get());
         exit(status);
     }
     /// print error message line(2) with Red color(fg)
@@ -213,7 +213,7 @@ impl Helper {
     pub fn help_err_exit<E>(&self, error: E, status: i32)
         where E: AsRef<str> + Display
     {
-        self.err_line_print(&self.help_err(error), statics::ERROR_LINE_COLOR_get());
+        self.err_line_print(&self.help_err(error), statics::error_line_color_get());
         exit(status);
     }
     /// get sub_command's help message
@@ -236,7 +236,7 @@ impl Helper {
         where E: AsRef<str> + Display
     {
         self.err_line_print(&self.help_cmd_err(cmd_name, error),
-                            statics::ERROR_LINE_COLOR_get());
+                            statics::error_line_color_get());
         exit(status);
     }
 }

@@ -92,7 +92,7 @@ impl<'app> App<'app> {
             .map(|cmd| if cmd.name != None {
                      let s = cmd.name.unwrap().to_string() +
                              &cmd.short
-                                  .map(|ss| format!(", {}", ss))
+                                  .map(|ss| ", ".to_owned()+ ss)
                                   .unwrap_or_default();
 
                      if s.len() > max_len {
@@ -118,7 +118,7 @@ impl<'app> App<'app> {
     //CMD_USAGE
     fn _help_usage(&self, cmd_name: Option<&str>, cmd_key: &Option<String>, blanks0: usize) -> String {
         let pkg = &self.helper.name;
-        let none_or_cmdname = cmd_name.map(|s| format!(" {}", s)).unwrap_or_default();
+        let none_or_cmdname = cmd_name.map(|s| " ".to_owned()+s ).unwrap_or_default();
         let cmd = &self.cmds[cmd_key];
         let mut usages = Vec::new();
 
@@ -174,7 +174,7 @@ struct OptInfo(String, String);
 impl<'app> Opt<'app> {
     fn to_info(&self) -> OptInfo {
         let optional_or_dafault = if self.is_optional() {
-            statics::OPTIONAL_get().to_owned()
+            statics::optional_get().to_owned()
         } else {
             self.value
                 .as_ref()
@@ -247,7 +247,7 @@ impl<'app> Cmd<'app> {
         let mut vs = Vec::new();
         for v in &self.args {
             let optional_or_dafault = if v.is_optional() {
-                statics::OPTIONAL_get().to_owned()
+                statics::optional_get().to_owned()
             } else {
                 v.value
                     .as_ref()

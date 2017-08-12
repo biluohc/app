@@ -46,7 +46,7 @@ or
     cargo run --example zipcs
 ```
 
-* [`sort_key`](https://github.com/biluohc/app/blob/master/examples/sort_key.rs): Option's order in help message
+* [`http`](https://github.com/biluohc/app/blob/master/examples/http.rs): Option's order in help message
 
 ```rustful
     git clone https://github.com/biluohc/app
@@ -78,6 +78,7 @@ mod avp;
 pub use avp::{ArgsValue, ArgsValueParse};
 /// Mut Statics
 pub mod statics;
+mod test;
 
 use std::collections::BTreeMap as Map;
 use std::default::Default;
@@ -313,8 +314,8 @@ impl<'app> App<'app> {
         }
         self.into_helper()
     }
-    fn parse_strings(&mut self, args: &[String]) -> Result<(), AppError> {
-        dbln!("args: {:?}", args);
+    pub fn parse_strings(&mut self, args: &[String]) -> Result<(), AppError> {
+        dbln!("parse_strings(): {:?}", args);
         self._build_helper();
         self.helper.current_exe = env::current_exe()
             .map(|s| s.to_string_lossy().into_owned())
@@ -439,7 +440,7 @@ impl<'app> Cmd<'app> {
     /// `default` and add `-h/--help` `Opt`
     fn add_help(self, b: &'static mut bool) -> Self {
         self.opt(Opt::new("help", b)
-                     .sort_key(statics::OPT_HELP_SORT_KEY_get())
+                     .sort_key(statics::opt_help_sort_key_get())
                      .short('h')
                      .long("help")
                      .help("Show the help message"))
@@ -447,7 +448,7 @@ impl<'app> Cmd<'app> {
     /// add `-v/version` `Opt`
     fn add_version(self) -> Self {
         self.opt(Opt::new("version", unsafe { &mut VERSION })
-                     .sort_key(statics::OPT_VERSION_SORT_KEY_get())
+                     .sort_key(statics::opt_version_sort_key_get())
                      .short('V')
                      .long("version")
                      .help("Show the version message"))
@@ -520,7 +521,7 @@ impl<'app> Cmd<'app> {
                 break;
             }
             let arg = &args[i];
-            // println!("i+1/args_len: {}/{}: {:?}", i + 1, args.len(), &args[i..]);
+            dbln!("i+1/args_len: {}/{}: {:?}", i + 1, args.len(), &args[i..]);
             match arg {
                 s if s.starts_with("--") && s != "--" => {
                     if let Some(opt_key) = self.str_to_key.get(s.as_str()) {
