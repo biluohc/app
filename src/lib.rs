@@ -584,7 +584,7 @@ impl<'app> Cmd<'app> {
                         return Err(format!("OPTION: {:?} is undefined", s));
                     }
                 }
-                s if s.starts_with('-') && s != "-" && s != "--" => {
+                s if s.starts_with('-') && s != "-" => {
                     if s.chars().count() > 2 {
                         let flags: Vec<String> = s[1..].chars().map(|c| format!("-{}", c)).collect();
                         let mut last_flag_is_not_bool = false;
@@ -865,7 +865,7 @@ impl<'app> Opt<'app> {
     pub fn count_add_one(&mut self) {
         self.count += 1;
     }
-    #[doc(hidden)]    
+    #[doc(hidden)]
     pub fn parse(&mut self, msg: &str) -> Result<(), String> {
         self.count_add_one();
         self.value.as_mut().parse(
@@ -875,7 +875,7 @@ impl<'app> Opt<'app> {
             &mut self.typo,
         )
     }
-    #[doc(hidden)]    
+    #[doc(hidden)]
     pub fn check(&self) -> Result<(), String> {
         self.value.as_ref().check(
             self.name,
@@ -980,11 +980,11 @@ impl<'app> Args<'app> {
         self.help = help;
         self
     }
-    #[doc(hidden)]        
+    #[doc(hidden)]
     fn count_add_one(&mut self) {
         self.count += 1;
     }
-    #[doc(hidden)]        
+    #[doc(hidden)]
     fn parse(&mut self, msg: &[String]) -> Result<(), String> {
         for arg in msg {
             self.count_add_one();
@@ -997,7 +997,7 @@ impl<'app> Args<'app> {
         }
         Ok(())
     }
-    #[doc(hidden)]    
+    #[doc(hidden)]
     fn check(&self) -> Result<(), String> {
         self.value.as_ref().check(
             self.name,
