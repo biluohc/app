@@ -1,24 +1,35 @@
 trait FixStyle {
     fn fix_style(&self) -> String;
+    fn fix_style_left(&self) -> String;
+    fn fix_style_right(&self) -> String;
 }
-impl<'a> FixStyle for &'a str {
+impl<'a, S: AsRef<str>> FixStyle for S {
     fn fix_style(&self) -> String {
-        if self.trim().is_empty() {
+        let msg = self.as_ref();
+        if msg.trim().is_empty() {
             String::new()
         } else {
-            format!("\n{}\n", self.trim())
+            format!("\n{}\n", msg.trim())
+        }
+    }
+    fn fix_style_left(&self) -> String {
+        let msg = self.as_ref();
+        if msg.trim().is_empty() {
+            String::new()
+        } else {
+            format!("\n{}", msg.trim())
+        }
+    }
+    fn fix_style_right(&self) -> String {
+        let msg = self.as_ref();
+        if msg.trim().is_empty() {
+            String::new()
+        } else {
+            format!("{}\n", msg.trim())
         }
     }
 }
-impl FixStyle for String {
-    fn fix_style(&self) -> String {
-        if self.trim().is_empty() {
-            String::new()
-        } else {
-            format!("\n{}\n", self.trim())
-        }
-    }
-}
+
 impl Helps {
     /// `-h/--help`
     pub fn version(&self) -> &str {
@@ -30,37 +41,40 @@ impl Helps {
     }
     /// `Cmd`
     pub fn help_cmd(&self, cmd_name: &Option<String>) -> String {
-        dbln!("{:?}\n{:?}\n\n{:?},\n\n{:?}\n\n{:?}",
-              cmd_name,
-              self.cmd_infos,
-              self.cmd_usages,
-              self.cmd_options,
-              self.cmd_args);
+        dbln!(
+            "{:?}\n{:?}\n\n{:?},\n\n{:?}\n\n{:?}",
+            cmd_name,
+            self.cmd_infos,
+            self.cmd_usages,
+            self.cmd_options,
+            self.cmd_args
+        );
         let info = &self.cmd_infos[cmd_name];
         let usages = &self.cmd_usages[cmd_name];
         let options = &self.cmd_options[cmd_name];
-        let args = self.cmd_args
-            .get(cmd_name)
-            .map(|s| s.as_str())
-            .unwrap_or("");
+        let args = self.cmd_args.get(cmd_name).map(|s| s.as_str()).unwrap_or(
+            "",
+        );
         let main_sub_cmds = if cmd_name.is_some() {
             ""
         } else {
             &self.sub_cmds
         };
-        format!(r#"{}{}{}{}{}{}{}"#,
-                info.fix_style(),
-                self.author.fix_style(),
-                self.addrs.fix_style(),
-                usages.fix_style(),
-                options.fix_style(),
-                args.fix_style(),
-                main_sub_cmds.fix_style())
+        format!(
+            r#"{}{}{}{}{}{}{}"#,
+            info.fix_style(),
+            self.author.fix_style_right(),
+            self.addrs.fix_style_right(),
+            usages.fix_style(),
+            options.fix_style(),
+            args.fix_style(),
+            main_sub_cmds.fix_style()
+        )
     }
 }
 
 ///**`Helps`**
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct Helps {
     /// `-v/--version`  "name version"
     pub version: String,
@@ -80,7 +94,7 @@ pub struct Helps {
 }
 
 /// **`Helper`**
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct Helper {
     is_built: bool,
     // info
@@ -145,10 +159,10 @@ impl Helper {
     pub fn temp_dir(&self) -> &String {
         &self.temp_dir
     }
-    pub fn as_helps(&self)->&Helps{
+    pub fn as_helps(&self) -> &Helps {
         &self.helps
     }
-    pub fn as_mut_helps(&mut self)->&mut Helps{
+    pub fn as_mut_helps(&mut self) -> &mut Helps {
         &mut self.helps
     }
 }
@@ -169,13 +183,15 @@ impl Helper {
     }
     /// `format!("ERROR:\n  {}\n\n", error)`
     pub fn err<E>(&self, error: E) -> String
-        where E: AsRef<str> + Display
+    where
+        E: AsRef<str> + Display,
     {
         format!("ERROR:\n   {}\n\n", error)
     }
     /// print error(`self.err(error)`) message to `stderr` and exit with the `status`
     pub fn err_exit<E>(&self, error: E, status: i32)
-        where E: AsRef<str> + Display
+    where
+        E: AsRef<str> + Display,
     {
         self.err_line_print(&self.err(error), statics::error_line_color_get());
         exit(status);
@@ -205,13 +221,15 @@ impl Helper {
     }
     /// `self.err(error) + self.help()`
     pub fn help_err<E>(&self, error: E) -> String
-        where E: AsRef<str> + Display
+    where
+        E: AsRef<str> + Display,
     {
         self.err(error) + &self.help()
     }
     /// print error and help message(`self.help_err(error)`) to `stderr` and exit with the `status`
     pub fn help_err_exit<E>(&self, error: E, status: i32)
-        where E: AsRef<str> + Display
+    where
+        E: AsRef<str> + Display,
     {
         self.err_line_print(&self.help_err(error), statics::error_line_color_get());
         exit(status);
@@ -227,16 +245,20 @@ impl Helper {
     }
     /// `self.err(error) + self.help_cmd(cmd_name)`
     pub fn help_cmd_err<E>(&self, cmd_name: &Option<String>, error: E) -> String
-        where E: AsRef<str> + Display
+    where
+        E: AsRef<str> + Display,
     {
         self.err(error) + &self.helps.help_cmd(cmd_name)
     }
     /// print error and sub_command's help message to `stderr`,s exit with the `status`
     pub fn help_cmd_err_exit<E>(&self, cmd_name: &Option<String>, error: E, status: i32)
-        where E: AsRef<str> + Display
+    where
+        E: AsRef<str> + Display,
     {
-        self.err_line_print(&self.help_cmd_err(cmd_name, error),
-                            statics::error_line_color_get());
+        self.err_line_print(
+            &self.help_cmd_err(cmd_name, error),
+            statics::error_line_color_get(),
+        );
         exit(status);
     }
 }

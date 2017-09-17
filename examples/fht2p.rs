@@ -22,7 +22,7 @@ impl Config {
                 .version("0.6.0")
                 .author("Wspsxing", "biluohc@qq.com")
                 .addr("Github", "https://github.com/biluohc/fht2p")
-                .desc("A HTTP Server for Static File written with Rust")
+                .desc("A HTTP Server for Static File written with Rust.")
                 .opt(Opt::new("cp", &mut cp).short('c').long("cp").help(
                     "Print the default config file",
                 ))

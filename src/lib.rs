@@ -837,7 +837,7 @@ impl<'app> Opt<'app> {
     }
     /// set `Opt`s optional as `true`(default is `false`)(override `OptValueParse`'s `default` and `check`).
     ///
-    /// `App` will will not check it's value and create help message without default's value if it is `true`.
+    /// `App` will will not check it's value if the `Opt` not occurs and create help message without default's value if it is `true`.
     pub fn optional(mut self) -> Self {
         self.optional = true;
         self

@@ -28,57 +28,53 @@ impl<'app> App<'app> {
             self.helper.helps.cmd_usages.insert(cmd_name.clone(), usage);
             // OPTIONS
             if !v.opts.is_empty() {
-                self.helper
-                    .helps
-                    .cmd_options
-                    .insert(cmd_name.clone(),
-                            format!("OPTIONS:\n{}", v.to_opts_info().to_string(3, 5)));
+                self.helper.helps.cmd_options.insert(
+                    cmd_name.clone(),
+                    format!("OPTIONS:\n{}", v.to_opts_info().to_string(3, 5)),
+                );
             }
             // ARGS
             if !v.args.is_empty() {
-                self.helper
-                    .helps
-                    .cmd_args
-                    .insert(cmd_name.clone(),
-                            format!("ARGS:\n{}", v.to_args_info().to_string(3, 5)));
+                self.helper.helps.cmd_args.insert(
+                    cmd_name.clone(),
+                    format!("ARGS:\n{}", v.to_args_info().to_string(3, 5)),
+                );
             }
         }
     }
     // --version
     fn _ver(&self, blanks0: usize) -> String {
-        format!("{}{}{}",
-                self.helper.name.trim(),
-                blanks_fix(blanks0),
-                self.helper.version.trim())
+        format!(
+            "{}{}{}",
+            self.helper.name.trim(),
+            blanks_fix(blanks0),
+            self.helper.version.trim()
+        )
     }
     // CMD_INFO
     fn _help_info(&self, cmd_name: Option<&str>, cmd_key: &Option<String>, blanks0: usize) -> String {
-        let version_or_subcmd = cmd_name.unwrap_or_else(||self.helper.version()).trim();
-        format!("{}{}{}\n{}",
-                self.helper.name.trim(),
-                blanks_fix(blanks0),
-                version_or_subcmd,
-                self.cmds[cmd_key].desc.trim())
+        let version_or_subcmd = cmd_name.unwrap_or_else(|| self.helper.version()).trim();
+        format!(
+            "{}{}{}\n{}",
+            self.helper.name.trim(),
+            blanks_fix(blanks0),
+            version_or_subcmd,
+            self.cmds[cmd_key].desc.trim()
+        )
     }
     // AUTHOR
     fn _help_author(&self, blanks0: usize) -> String {
         let mut authors = String::new();
-        if !self.helper.authors.is_empty() {
-            authors.push_str("AUTHOR:\n");
-            for &(ref author, ref email) in &self.helper.authors {
-                authors.push_str(&format!("{}{} <{}>\n", blanks_fix(blanks0), author, email));
-            }
+        for &(ref author, ref email) in &self.helper.authors {
+            authors.push_str(&format!("{}{} <{}>\n", blanks_fix(blanks0), author, email));
         }
         authors
     }
     // ADDRESS
     fn _help_address(&self, blanks0: usize) -> String {
         let mut authors = String::new();
-        if !self.helper.addrs.is_empty() {
-            authors.push_str("ADDRESS:\n");
-            for &(ref author, ref email) in &self.helper.addrs {
-                authors.push_str(&format!("{}{}: {}\n", blanks_fix(blanks0), author, email));
-            }
+        for &(ref author, ref email) in &self.helper.addrs {
+            authors.push_str(&format!("{}{}: {}\n", blanks_fix(blanks0), author, email));
         }
         authors
     }
@@ -90,35 +86,34 @@ impl<'app> App<'app> {
         self.cmds
             .values()
             .map(|cmd| if cmd.name != None {
-                     let s = cmd.name.unwrap().to_string() +
-                             &cmd.short
-                                  .map(|ss| ", ".to_owned()+ ss)
-                                  .unwrap_or_default();
+                let s = cmd.name.unwrap().to_string() + &cmd.short.map(|ss| ", ".to_owned() + ss).unwrap_or_default();
 
-                     if s.len() > max_len {
-                         max_len = s.len()
-                     }
-                     vs.push(s);
-                 })
+                if s.len() > max_len {
+                    max_len = s.len()
+                }
+                vs.push(s);
+            })
             .count();
         let mut it = vs.iter();
         self.cmds
             .values()
             .map(|cmd| if cmd.name != None {
-                     let name_ = it.next().unwrap();
-                     cammands.push_str(&format!("{}{}{}{}\n",
-                                               blanks_fix(blanks0),
-                                               name_,
-                                               blanks_fix(blanks1 + max_len - name_.len()),
-                                               cmd.desc))
-                 })
+                let name_ = it.next().unwrap();
+                cammands.push_str(&format!(
+                    "{}{}{}{}\n",
+                    blanks_fix(blanks0),
+                    name_,
+                    blanks_fix(blanks1 + max_len - name_.len()),
+                    cmd.desc
+                ))
+            })
             .count();
         cammands
     }
     //CMD_USAGE
     fn _help_usage(&self, cmd_name: Option<&str>, cmd_key: &Option<String>, blanks0: usize) -> String {
         let pkg = &self.helper.name;
-        let none_or_cmdname = cmd_name.map(|s| " ".to_owned()+s ).unwrap_or_default();
+        let none_or_cmdname = cmd_name.map(|s| " ".to_owned() + s).unwrap_or_default();
         let cmd = &self.cmds[cmd_key];
         let mut usages = Vec::new();
 
@@ -126,9 +121,11 @@ impl<'app> App<'app> {
         let mut argss = " ".to_owned();
         cmd.opts
             .values()
-            .map(|opt| if opt.optional || opt.value.as_ref().default().is_some() {
-                     option_optional = true;
-                 })
+            .map(|opt| if opt.optional ||
+                opt.value.as_ref().default().is_some()
+            {
+                option_optional = true;
+            })
             .count();
         cmd.args
             .as_slice()
@@ -145,16 +142,26 @@ impl<'app> App<'app> {
                 };
                 if args.optional || args.value.as_ref().default().is_some() {
                     fmt_ = format!("[{}] ", fmt_);
-                }else {
+                } else {
                     fmt_.push(' ');
                 }
                 argss.push_str(&fmt_);
             })
             .count();
         if option_optional {
-            usages.push(format!("{}{} [options] {}", pkg, none_or_cmdname, argss.trim()));
+            usages.push(format!(
+                "{}{} [options] {}",
+                pkg,
+                none_or_cmdname,
+                argss.trim()
+            ));
         } else {
-            usages.push(format!("{}{} options {}", pkg, none_or_cmdname, argss.trim()));
+            usages.push(format!(
+                "{}{} options {}",
+                pkg,
+                none_or_cmdname,
+                argss.trim()
+            ));
         }
         if cmd_name == None && self.cmds.len() > 1 {
             usages.push(format!("{} <command> [args]", pkg));
@@ -164,7 +171,9 @@ impl<'app> App<'app> {
         usages
             .as_slice()
             .iter()
-            .map(|s| help.push_str(&format!("{}{}\n", blanks_fix(blanks0), s)))
+            .map(|s| {
+                help.push_str(&format!("{}{}\n", blanks_fix(blanks0), s))
+            })
             .count();
         help
     }
@@ -222,11 +231,19 @@ impl OptsInfo {
         let blanks0 = blanks_fix(blanks0);
         let mut s_tmp = String::new();
         for val in &self.0 {
-            s_tmp.push_str(&format!("{}{}{}{}\n",
-                                   blanks0,
-                                   val.0,
-                                   blanks_fix(blanks1 - val.0.len()),
-                                   val.1));
+            for (idx, line) in val.1.lines().enumerate() {
+                if idx == 0 {
+                    s_tmp.push_str(&format!(
+                        "{}{}{}{}\n",
+                        blanks0,
+                        val.0,
+                        blanks_fix(blanks1 - val.0.len()),
+                        line
+                    ));
+                } else {
+                    s_tmp.push_str(&format!("{}{}{}\n", blanks0, blanks_fix(blanks1), line));
+                }
+            }
         }
         s_tmp
     }
@@ -256,8 +273,10 @@ impl<'app> Cmd<'app> {
                     // vec![] -> []
                     .unwrap_or_else(String::new)
             };
-            vs.push(ArgsInfo(format!("<{}>{}", v.name, optional_or_dafault),
-                             v.help.to_string()));
+            vs.push(ArgsInfo(
+                format!("<{}>{}", v.name, optional_or_dafault),
+                v.help.to_string(),
+            ));
         }
         ArgssInfo(vs)
     }
@@ -275,11 +294,19 @@ impl ArgssInfo {
         let blanks0 = blanks_fix(blanks0);
         let mut s_tmp = String::new();
         for val in &self.0 {
-            s_tmp.push_str(&format!("{}{}{}{}\n",
-                                   blanks0,
-                                   val.0,
-                                   blanks_fix(blanks1 - val.0.len()),
-                                   val.1));
+            for (idx, line) in val.1.lines().enumerate() {
+                if idx == 0 {
+                    s_tmp.push_str(&format!(
+                        "{}{}{}{}\n",
+                        blanks0,
+                        val.0,
+                        blanks_fix(blanks1 - val.0.len()),
+                        line
+                    ));
+                } else {
+                    s_tmp.push_str(&format!("{}{}{}\n", blanks0, blanks_fix(blanks1), line));
+                }
+            }
         }
         s_tmp
     }
