@@ -861,10 +861,12 @@ impl<'app> Opt<'app> {
         self.typo = typo;
         self
     }
-    fn count_add_one(&mut self) {
+    #[doc(hidden)]
+    pub fn count_add_one(&mut self) {
         self.count += 1;
     }
-    fn parse(&mut self, msg: &str) -> Result<(), String> {
+    #[doc(hidden)]    
+    pub fn parse(&mut self, msg: &str) -> Result<(), String> {
         self.count_add_one();
         self.value.as_mut().parse(
             self.name,
@@ -873,7 +875,8 @@ impl<'app> Opt<'app> {
             &mut self.typo,
         )
     }
-    fn check(&self) -> Result<(), String> {
+    #[doc(hidden)]    
+    pub fn check(&self) -> Result<(), String> {
         self.value.as_ref().check(
             self.name,
             &self.optional,
@@ -977,9 +980,11 @@ impl<'app> Args<'app> {
         self.help = help;
         self
     }
+    #[doc(hidden)]        
     fn count_add_one(&mut self) {
         self.count += 1;
     }
+    #[doc(hidden)]        
     fn parse(&mut self, msg: &[String]) -> Result<(), String> {
         for arg in msg {
             self.count_add_one();
@@ -992,6 +997,7 @@ impl<'app> Args<'app> {
         }
         Ok(())
     }
+    #[doc(hidden)]    
     fn check(&self) -> Result<(), String> {
         self.value.as_ref().check(
             self.name,
