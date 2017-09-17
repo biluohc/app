@@ -24,31 +24,55 @@ impl<'app> AsMut<Box<ArgsValueParse<'app> + 'app>> for ArgsValue<'app> {
         &mut self.inner
     }
 }
-/// **You can use custom `ArgsValue` by `impl` it**
-///
-/// ### **Explain**
-///
-/// * `into(self)` convert it(`&mut T`)  to `ArgsValue`.
-///
-///
-/// * `default(&self)` is `Arguments`'s default value's str for help message print
-///
-///
-/// * `parse(&mut self, args_name: String, msg: &[String])` maintains the value, and return message by `Result<(),String>`.
-///
-///   `args_name` is current `cmd`'s `args_name`, `msg` is the `&[String]` need to pasre.
-///
-/// * `check(&self, opt_name: &str)` check value and return message by `Result<(),String>`.
+/**
+ **You can use custom `ArgsValue` by `impl` it**
+
+ 1. `into(self)` convert it(`&mut T`)  to `ArgsValue`.
+
+
+ 2. `default(&self)` is `Arguments`'s default value's str for help message print
+
+
+ 3. `parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>)` maintains the value, and return message by `Result<(),String>`.
+
+   `args_name` is the name of `Args`, `msg` is a arg need to pasre, `count` is the count for arg, `len` is the length setting fot `Args`, default is `None(Vec<T>)` or `self.len()(&mut [T])`
+
+ 4. `check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>)` check value and return message by `Result<(),String>`, `optional` is the optional setting for `Args`
+
+    If the `Opt` is not optional, and this `Opt` hasn't occurs, and `self.default().is_none()`, app will exit because of `ARGS` Missing.
+
+    if value is a `&mut Vec<T>`, the setting of length(`len`) is None default,
+
+    if value is a `&mut [T]`, the setting of length(`len`) is `value.len()` default,
+
+    If `len.is_some()` and the `Args` occured, app will compare it with the times `Args` occurs('count`)(If not equal, app will exit)
+    
+* If the name of executable file is `ap` , has a `Port` `Args`(inner value is empty `Vec<u16>`)
+
+```bash
+ap "80" 
+# vec[80]
+
+# all types being impl `ArgsValue` will call `trim()` before call `parse::<T>()` except `char`,`String`, `PathBuf` and their `Option`, `Vec`, `Slice`.
+# So have some fault-tolerant.
+
+ap " 80  "       
+# vec[80]
+
+ap 80 "8000 " " 8080"
+# Vec[8080,8000,80]
+```
+ */
 pub trait ArgsValueParse<'app>: Debug {
     fn into(self) -> ArgsValue<'app>;
     fn default(&self) -> Option<String>;
-    fn parse(&mut self, args_name: &str, msg: &[String]) -> Result<(), String>;
-    fn check(&self, args_name: &str) -> Result<(), String>;
+    fn parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>) -> Result<(), String>;
+    fn check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>) -> Result<(), String>;
 }
 
 impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<String> {
     fn into(self) -> ArgsValue<'app> {
-        ArgsValue { inner: Box::from(self) }
+        ArgsValue::new(Box::from(self))
     }
     fn default(&self) -> Option<String> {
         if self.is_empty() {
@@ -57,27 +81,45 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<String> {
             Some(format!("{:?}", self))
         }
     }
-    fn parse(&mut self, _: &str, msg: &[String]) -> Result<(), String> {
-        if !msg.is_empty() {
-            self.clear();
+    fn parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>) -> Result<(), String> {
+        if *count == 1 {
+            self.clear(); //clear the dafault value
         }
-        msg.iter()
-            .filter(|s| !s.is_empty())
-            .map(|s| self.push(s.to_string()))
-            .count();
+        if let Some(len) = len.as_ref() {
+            if count as &usize > len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    msg
+                ))?;
+            }
+        }
+        self.push(msg.to_string());
         Ok(())
     }
-    fn check(&self, args_name: &str) -> Result<(), String> {
-        if self.is_empty() {
-            Err(format!("Args(<{}>) missing", args_name))
-        } else {
-            Ok(())
+    fn check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>) -> Result<(), String> {
+        if !optional && *count == 0 && self.default().is_none() {
+            Err(format!("ARGS(<{}>) missing", args_name))?;
         }
+        if let Some(len) = len {
+            if *count != 0 && count != len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    self
+                ))?;
+            }
+        }
+        Ok(())
     }
 }
 impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<PathBuf> {
     fn into(self) -> ArgsValue<'app> {
-        ArgsValue { inner: Box::from(self) }
+        ArgsValue::new(Box::from(self))
     }
     fn default(&self) -> Option<String> {
         if self.is_empty() {
@@ -86,28 +128,46 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<PathBuf> {
             Some(format!("{:?}", self))
         }
     }
-    fn parse(&mut self, _: &str, msg: &[String]) -> Result<(), String> {
-        if !msg.is_empty() {
+    fn parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>) -> Result<(), String> {
+        if *count == 1 {
             self.clear();
         }
-        msg.iter()
-            .filter(|s| !s.is_empty())
-            .map(|s| self.push(PathBuf::from(s)))
-            .count();
+        if let Some(len) = len.as_ref() {
+            if count as &usize > len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    msg
+                ))?;
+            }
+        }
+        self.push(PathBuf::from(msg));
         Ok(())
     }
-    fn check(&self, args_name: &str) -> Result<(), String> {
-        if self.is_empty() {
-            Err(format!("Args(<{}>) missing", args_name))
-        } else {
-            Ok(())
+    fn check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>) -> Result<(), String> {
+        if !optional && *count == 0 && self.default().is_none() {
+            Err(format!("ARGS(<{}>) missing", args_name))?;
         }
+        if let Some(len) = len {
+            if *count != 0 && count != len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    self
+                ))?;
+            }
+        }
+        Ok(())
     }
 }
 
 impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<char> {
     fn into(self) -> ArgsValue<'app> {
-        ArgsValue { inner: Box::from(self) }
+        ArgsValue::new(Box::from(self))
     }
     fn default(&self) -> Option<String> {
         if self.is_empty() {
@@ -116,26 +176,47 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<char> {
             Some(format!("{:?}", self))
         }
     }
-    fn parse(&mut self, args_name: &str, msg: &[String]) -> Result<(), String> {
-        if !msg.is_empty() {
+    fn parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>) -> Result<(), String> {
+        if *count == 1 {
             self.clear();
         }
-        for str in msg {
-            let chars: Vec<char> = str.chars().collect();
-            if chars.len() != 1 {
-                return Err(format!("Args(<{}>): {:?} is invalid", args_name, str));
-            } else {
-                self.push(chars[0]);
+        if let Some(len) = len.as_ref() {
+            for (idx, c) in msg.chars().enumerate() {
+                if idx != 0 {
+                    *count += 1; // count_add_one() alrendy add one.
+                }
+                if count as &usize > len {
+                    Err(format!(
+                        "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                        args_name,
+                        len,
+                        count,
+                        msg
+                    ))?;
+                }
+                self.push(c);
             }
+        } else {
+            *count = msg.chars().map(|c| self.push(c)).count() + *count - 1;
         }
         Ok(())
     }
-    fn check(&self, args_name: &str) -> Result<(), String> {
-        if self.is_empty() {
-            Err(format!("Args(<{}>) missing", args_name))
-        } else {
-            Ok(())
+    fn check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>) -> Result<(), String> {
+        if !optional && *count == 0 && self.default().is_none() {
+            Err(format!("ARGS(<{}>) missing", args_name))?;
         }
+        if let Some(len) = len {
+            if *count != 0 && count != len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    self
+                ))?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -143,7 +224,7 @@ macro_rules! add_vec_impl {
     ($($t:ty)*) => ($(
         impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<$t> {
         fn into(self) -> ArgsValue<'app> {
-        ArgsValue { inner: Box::from(self) }
+        ArgsValue::new(Box::from(self))
     }
     fn default(&self) -> Option<String> {
         if self.is_empty() {
@@ -152,29 +233,256 @@ macro_rules! add_vec_impl {
             Some(format!("{:?}",self))
         }
     }
-    fn parse(&mut self, args_name: &str, msg: &[String]) -> Result<(), String> {
-        if !msg.is_empty(){ self.clear(); }
-                let vs: Vec<&String> = msg.iter().filter(|s| !s.trim().is_empty()).collect();
-                for str in &vs {
-                    self.push(str.parse::<$t>()
-                               .map_err(|_| {
-                                            format!("Args(<{}>) parse<{}> fails: \"{}\"",
-                                                    args_name,
-                                                    stringify!($t),
-                                                    str)
-                                        })?)
-                }
+    fn parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>) -> Result<(), String> {
+        if *count == 1 {
+            self.clear();
+        }
+        if let Some(len) = len.as_ref()  {
+            if count as &usize > len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,count,
+                    msg
+                ))?;
+            }
+        }
+        self.push(msg.trim().parse::<$t>()
+            .map_err(|_| {
+                        format!("Args(<{}>) parse<{}> fails: \"{}\"",
+                                args_name,
+                                stringify!($t),
+                                msg)
+                    })?);
                 Ok(())
     }
-    fn check(&self, args_name: &str) -> Result<(), String> {
-        if self.is_empty() {
-            Err(format!("Args(<{}>) missing", args_name))
-        } else {
-            Ok(())
+    fn check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>) -> Result<(), String> {
+        if !optional && *count == 0 && self.default().is_none() {
+            Err(format!("ARGS(<{}>) missing", args_name))?;
         }
+        if let Some(len) = len {
+            if *count != 0 && count != len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    self
+                ))?;
+            }
+        }
+        Ok(())
     }
         }
     )*)
 }
 add_vec_impl! { bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 }
 add_vec_impl! { IpAddr Ipv4Addr Ipv6Addr SocketAddr SocketAddrV4 SocketAddrV6 }
+
+impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [String] {
+    fn into(self) -> ArgsValue<'app> {
+        ArgsValue::new(Box::from(self))
+    }
+    fn default(&self) -> Option<String> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(format!("{:?}", self))
+        }
+    }
+    fn parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>) -> Result<(), String> {
+        if len.is_none() {
+            *len = Some(self.len());
+        }
+        if let Some(len) = len.as_ref() {
+            if count as &usize > len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    msg
+                ))?;
+            }
+        }
+        self[*count - 1] = msg.to_string();
+        Ok(())
+    }
+    fn check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>) -> Result<(), String> {
+        if !optional && *count == 0 && self.default().is_none() {
+            Err(format!("ARGS(<{}>) missing", args_name))?;
+        }
+        if let Some(len) = len {
+            if *count != 0 && count != len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    self
+                ))?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [PathBuf] {
+    fn into(self) -> ArgsValue<'app> {
+        ArgsValue::new(Box::from(self))
+    }
+    fn default(&self) -> Option<String> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(format!("{:?}", self))
+        }
+    }
+    fn parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>) -> Result<(), String> {
+        if len.is_none() {
+            *len = Some(self.len());
+        }
+        if let Some(len) = len.as_ref() {
+            if count as &usize > len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    msg
+                ))?;
+            }
+        }
+        self[*count - 1] = PathBuf::from(msg);
+        Ok(())
+    }
+    fn check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>) -> Result<(), String> {
+        if !optional && *count == 0 && self.default().is_none() {
+            Err(format!("ARGS(<{}>) missing", args_name))?;
+        }
+        if let Some(len) = len {
+            if *count != 0 && count != len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    self
+                ))?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [char] {
+    fn into(self) -> ArgsValue<'app> {
+        ArgsValue::new(Box::from(self))
+    }
+    fn default(&self) -> Option<String> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(format!("{:?}", self))
+        }
+    }
+    fn parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>) -> Result<(), String> {
+        if len.is_none() {
+            *len = Some(self.len());
+        }
+        for (idx, c) in msg.chars().enumerate() {
+            if idx != 0 {
+                *count += 1; // count_add_one() alrendy add one.
+            }
+            if let Some(len) = len.as_ref() {
+                if count as &usize > len {
+                    Err(format!(
+                        "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                        args_name,
+                        len,
+                        count,
+                        msg
+                    ))?;
+                }
+                self[*count - 1] = c;
+            }
+        }
+        Ok(())
+    }
+    fn check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>) -> Result<(), String> {
+        if !optional && *count == 0 && self.default().is_none() {
+            Err(format!("ARGS(<{}>) missing", args_name))?;
+        }
+        if let Some(len) = len {
+            if *count != 0 && count != len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    self
+                ))?;
+            }
+        }
+        Ok(())
+    }
+}
+
+macro_rules! add_slice_impl {
+    ($($t:ty)*) => ($(
+        impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [$t] {
+        fn into(self) -> ArgsValue<'app> {
+        ArgsValue::new(Box::from(self))
+    }
+    fn default(&self) -> Option<String> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(format!("{:?}",self))
+        }
+    }
+    fn parse(&mut self, args_name: &str, msg: &str, count: &mut usize, len: &mut Option<usize>) -> Result<(), String> {
+        if len.is_none() {
+            *len = Some(self.len());
+        }
+        if let Some(len) = len.as_ref() {
+            if count as &usize > len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,count,
+                    msg
+                ))?;
+            }
+        }
+        self[*count-1] = msg.trim().parse::<$t>()
+            .map_err(|_| {
+                        format!("Args(<{}>) parse<{}> fails: \"{}\"",
+                                args_name,
+                                stringify!($t),
+                                msg)
+                    })?;
+                Ok(())
+    }
+    fn check(&self, args_name: &str, optional: &bool, count: &usize, len: Option<&usize>) -> Result<(), String> {
+        if !optional && *count == 0 && self.default().is_none() {
+            Err(format!("ARGS(<{}>) missing", args_name))?;
+        }
+        if let Some(len) = len {
+            if *count != 0 && count != len {
+                Err(format!(
+                    "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
+                    args_name,
+                    len,
+                    count,
+                    self
+                ))?;
+            }
+        }
+        Ok(())
+    }
+        }
+    )*)
+}
+add_slice_impl! { bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 }
+add_slice_impl! { IpAddr Ipv4Addr Ipv6Addr SocketAddr SocketAddrV4 SocketAddrV6 }

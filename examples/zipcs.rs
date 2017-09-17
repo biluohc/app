@@ -1,11 +1,11 @@
 extern crate app;
 
-use app::{App, Cmd, Opt, Args, OptValue, OptValueParse};
+use app::{App, Cmd, Opt, Args, OptValue, OptValueParse, OptTypo};
 
 fn main() {
     Config::parse()
 }
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct Config {
     zip: Zips,
     ping: Pings,
@@ -16,10 +16,12 @@ impl Config {
         let mut config = Self::default();
         config.zip.outdir = "./".to_owned();
         let mut list = false;
-        let charsets = format!("Sets the charset Zipcs using({})",
-                               "UTF_8, UTF_16BE, UTF_16LE, GBK, GB18030, HZ, BIG5"
-                                   .replace("_", "")
-                                   .to_lowercase());
+        let charsets = format!(
+            "Sets the charset Zipcs using({})",
+            "UTF_8, UTF_16BE, UTF_16LE, GBK, GB18030, HZ, BIG5"
+                .replace("_", "")
+                .to_lowercase()
+        );
         let helper = {
             App::new("zipcs")
                 .version("0.6.0")
@@ -27,52 +29,75 @@ impl Config {
                 .addr("Repository", "https://github.com/biluohc/zipcs")
                 .desc("Useful tools collection")
                 .allow_zero_args(false)
-                .cmd(Cmd::new("zip")
-                         .short("z")
-                         .sort_key("a0")
-                         .desc("Unzip with charset setting")
-                         .opt(Opt::new("list", &mut list)
-                                  .short('l')
-                                  .long("list")
-                                  .help("Only list files from ZipArchives"))
-                         .opt(Opt::new("charset", &mut config.zip.charset)
-                                  .short('c')
-                                  .long("charset")
-                                  .help(&charsets))
-                         .opt(Opt::new("outdir", &mut config.zip.outdir)
-                                  .short('o')
-                                  .long("outdir")
-                                  .help("Sets Output directory"))
-                         .args(Args::new("ZipArchive", &mut config.zip.zips).help("ZipArchive need to unzip")))
-                .cmd(Cmd::new("ping")
-                         .short("p")
-                         .sort_key("a1")
-                         .desc("ping domains/ips")
-                         .opt(Opt::new("count", &mut config.ping.count)
-                                  .short('c')
-                                  .long("count")
-                                  .help("stop after sending count ECHO_REQUEST packets"))
-                         .opt(Opt::new("_6", &mut config.ping._6)
-                                  .short('6')
-                                  .help("use IPV6"))
-                         .opt(Opt::new("only-line", &mut config.ping.only_line)
-                                  .short('l')
-                                  .long("only-line")
-                                  .help("print result only-line"))
-                         .args(Args::new("Host/IP", &mut config.ping.hosts).help("Host or IP need to ping")))
-                .cmd(Cmd::new("url")
-                         .short("l")
-                         .sort_key("a2")
-                         .desc("Urls decoding/encoding")
-                         .opt(Opt::new("encode", &mut config.url.is_encode)
-                                  .short('e')
-                                  .long("encode")
-                                  .help("encode(default is decode)"))
-                         .opt(Opt::new("plus", &mut config.url.is_plus)
-                                  .short('p')
-                                  .long("plus")
-                                  .help("replaces ' ' with '+'"))
-                         .args(Args::new("Url", &mut config.url.strs).help("Url need to decode/encode")))
+                .cmd(
+                    Cmd::new("zip")
+                        .short("z")
+                        .sort_key("a0")
+                        .desc("Unzip with charset setting")
+                        .opt(Opt::new("list", &mut list).short('l').long("list").help(
+                            "Only list files from ZipArchives",
+                        ))
+                        .opt(
+                            Opt::new("charset", &mut config.zip.charset)
+                                .short('c')
+                                .long("charset")
+                                .help(&charsets),
+                        )
+                        .opt(
+                            Opt::new("outdir", &mut config.zip.outdir)
+                                .short('o')
+                                .long("outdir")
+                                .help("Sets Output directory"),
+                        )
+                        .args(Args::new("ZipArchive", &mut config.zip.zips).help(
+                            "ZipArchive need to unzip",
+                        )),
+                )
+                .cmd(
+                    Cmd::new("ping")
+                        .short("p")
+                        .sort_key("a1")
+                        .desc("ping domains/ips")
+                        .opt(
+                            Opt::new("count", &mut config.ping.count)
+                                .short('c')
+                                .long("count")
+                                .help("stop after sending count ECHO_REQUEST packets"),
+                        )
+                        .opt(Opt::new("_6", &mut config.ping._6).short('6').help(
+                            "use IPV6",
+                        ))
+                        .opt(
+                            Opt::new("only-line", &mut config.ping.only_line)
+                                .short('l')
+                                .long("only-line")
+                                .help("print result only-line"),
+                        )
+                        .args(Args::new("Host/IP", &mut config.ping.hosts).help(
+                            "Host or IP need to ping",
+                        )),
+                )
+                .cmd(
+                    Cmd::new("url")
+                        .short("l")
+                        .sort_key("a2")
+                        .desc("Urls decoding/encoding")
+                        .opt(
+                            Opt::new("encode", &mut config.url.is_encode)
+                                .short('e')
+                                .long("encode")
+                                .help("encode(default is decode)"),
+                        )
+                        .opt(
+                            Opt::new("plus", &mut config.url.is_plus)
+                                .short('p')
+                                .long("plus")
+                                .help("replaces ' ' with '+'"),
+                        )
+                        .args(Args::new("Url", &mut config.url.strs).help(
+                            "Url need to decode/encode",
+                        )),
+                )
                 .parse_args()
         };
         if list {
@@ -113,19 +138,36 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut CharSet {
     fn default(&self) -> Option<String> {
         Some("utf8".to_owned())
     }
-    fn parse(&mut self, opt_name: String, msg: &str) -> Result<(), String> {
-        match CharSet::new(msg) {
-            Err(_) => return Err(format!("OPTION(<{}>) parse<CharSet> fails: \"{}\"", opt_name, msg)),
-            Ok(o) => **self = o,
+    fn parse(&mut self, opt_name: &str, msg: &str, count: &mut usize, typo: &mut OptTypo) -> Result<(), String> {
+        if *count == 0 || typo.is_covered() || typo.is_multiple() {
+            match CharSet::new(msg) {
+                Err(_) => {
+                    Err(format!(
+                        "OPTION(<{}>) parse<CharSet> fails: \"{}\"",
+                        opt_name,
+                        msg
+                    ))?;
+                }
+                Ok(o) => **self = o,}
+        } else if typo.is_single() {
+            Err(format!(
+                "OPTION(<{}>) can only occurs once, but second: {:?}",
+                opt_name,
+                msg
+            ))?;
         }
         Ok(())
     }
-    fn check(&self, _: &str) -> Result<(), String> {
+    /// env::arg could is `""`
+    fn check(&self, opt_name: &str, optional: &bool, count: &usize, _: &OptTypo) -> Result<(), String> {
+        if !optional && *count == 0 &&self.default().is_none() {
+            Err(format!("OPTION(<{}>) missing", opt_name))?;
+        }
         Ok(())
     }
 }
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct Urls {
     pub is_plus: bool,
     pub is_encode: bool,
@@ -136,7 +178,7 @@ impl Urls {
         //do something
     }
 }
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct Pings {
     pub _6: bool,
     pub only_line: bool,
@@ -148,7 +190,7 @@ impl Pings {
         //do something
     }
 }
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Task {
     LIST, // zipcs -l/--list
     UNZIP, // Extract files from archive with full paths
@@ -159,7 +201,7 @@ impl Default for Task {
     }
 }
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct Zips {
     pub charset: CharSet, //zip -cs/--charset   // utf-8
     pub outdir: String, //zipcs -o/--outdir   //./
@@ -176,7 +218,7 @@ impl Zips {
         Ok(())
     }
 }
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 #[allow(non_camel_case_types)]
 pub enum CharSet {
     UTF_8,

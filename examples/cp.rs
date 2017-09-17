@@ -19,21 +19,33 @@ impl Config {
             App::new("cp")
                 .version("0.6.0")
                 .author("Wspsxing", "biluohc@qq.com")
-                .addr("Github",
-                      "https://github.com/biluohc/app/blob/master/examples/cp.rs")
+                .addr(
+                    "Github",
+                    "https://github.com/biluohc/app/blob/master/examples/cp.rs",
+                )
                 .desc("Copy SOURCE to DEST, or multiple SOURCE(s) to DIRECTORY.")
-                .opt(Opt::new("force", &mut config.force)
-                         .short('f')
-                         .long("force")
-                         .help("if an existing destination file cannot be opened, remove it and try again"))
-                .opt(Opt::new("recursive", &mut config.recursive)
-                         .short('r')
-                         .long("recursive")
-                         .help("Recursively copy all content within a directory and its subdirectories"))
-                .args(Args::new("SOURCE", &mut config.source).help("CP the SOURCE(s) to DEST"))
-                .args(Args::new("DEST", &mut config.dest)
-                          .len(1usize)
-                          .help("DEST Path"))
+                .opt(
+                    Opt::new("force", &mut config.force)
+                        .short('f')
+                        .long("force")
+                        .help(
+                            "if an existing destination file cannot be opened, remove it and try again",
+                        ),
+                )
+                .opt(
+                    Opt::new("recursive", &mut config.recursive)
+                        .short('r')
+                        .long("recursive")
+                        .help(
+                            "Recursively copy all content within a directory and its subdirectories",
+                        ),
+                )
+                .args(Args::new("SOURCE", &mut config.source).help(
+                    "CP the SOURCE(s) to DEST",
+                ))
+                .args(Args::new("DEST", &mut config.dest).len(1usize).help(
+                    "DEST Path",
+                ))
                 .parse_args()
         };
         config
@@ -52,7 +64,7 @@ impl Config {
     }
 }
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct Config {
     pub recursive: bool,
     pub force: bool,

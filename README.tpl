@@ -5,3 +5,16 @@
 [![Documentation](https://docs.rs/app/badge.svg)](https://docs.rs/app)
 
 {{readme}}
+
+## To Du
+
+name | status | exapmle
+ -|-|-|
+Flag  |√|               `ls --help` , `cargo -V`
+Option |√|              `http --port 8080` , `rustc -o filename`
+Args  |√|               `rm Path1 Path2 Path3`
+SubCMD |√|              `cargo run` `cargo doc` 
+Flags aggregation|√|    `ls -a -l` => `ls -al`
+Multi Args |√|          `cp SOURCE1 SOURCE2 SOUCE3 DEST`
+Optional for Option and Args |√| 
+Dependencies and Conflicts between Options |x|

@@ -23,28 +23,37 @@ impl Config {
                 .author("Wspsxing", "biluohc@qq.com")
                 .addr("Github", "https://github.com/biluohc/fht2p")
                 .desc("A HTTP Server for Static File written with Rust")
-                .opt(Opt::new("cp", &mut cp)
-                         .short('c')
-                         .long("cp")
-                         .help("Print the default config file"))
-                .opt(Opt::new("config", &mut c_path)
-                         .optional()
-                         .short('C')
-                         .long("config")
-                         .help("Sets a custom config file"))
-                .opt(Opt::new("keep_alive", &mut config.keep_alive)
-                         .short('k')
-                         .long("keep-alive")
-                         .help("use keep-alive"))
-                .opt(Opt::new("ip", &mut config.server.ip)
-                         .short('i')
-                         .long("ip")
-                         .help("Sets listenning ip"))
-                .opt(Opt::new("port", &mut config.server.port)
-                         .short('p')
-                         .long("port")
-                         .help("Sets listenning port"))
-                .args(Args::new("PATH", &mut config.paths).help("Sets the path to share"))
+                .opt(Opt::new("cp", &mut cp).short('c').long("cp").help(
+                    "Print the default config file",
+                ))
+                .opt(
+                    Opt::new("config", &mut c_path)
+                        .optional()
+                        .short('C')
+                        .long("config")
+                        .help("Sets a custom config file"),
+                )
+                .opt(
+                    Opt::new("keep_alive", &mut config.keep_alive)
+                        .short('k')
+                        .long("keep-alive")
+                        .help("use keep-alive"),
+                )
+                .opt(
+                    Opt::new("ip", &mut config.server.ip)
+                        .short('i')
+                        .long("ip")
+                        .help("Sets listenning ip"),
+                )
+                .opt(
+                    Opt::new("port", &mut config.server.port)
+                        .short('p')
+                        .long("port")
+                        .help("Sets listenning port"),
+                )
+                .args(Args::new("PATH", &mut config.paths).help(
+                    "Sets the path to share",
+                ))
                 .parse_args()
         };
         if cp {
@@ -72,7 +81,7 @@ impl Config {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Server {
     pub ip: IpAddr,
     pub port: u16,
@@ -86,7 +95,7 @@ impl Default for Server {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub keep_alive: bool,
     pub server: Server,
