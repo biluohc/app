@@ -99,13 +99,22 @@ impl<'app> App<'app> {
             .values()
             .map(|cmd| if cmd.name != None {
                 let name_ = it.next().unwrap();
-                cammands.push_str(&format!(
-                    "{}{}{}{}\n",
-                    blanks_fix(blanks0),
-                    name_,
-                    blanks_fix(blanks1 + max_len - name_.len()),
-                    cmd.desc
-                ))
+
+                let mut s_tmp = String::default();
+                for (idx, line) in cmd.desc.lines().enumerate() {
+                if idx == 0 {
+                    s_tmp.push_str(&format!(
+                        "{}{}{}{}\n",
+                        blanks_fix(blanks0),
+                        name_,
+                        blanks_fix(blanks1 + max_len - name_.len()),
+                        line
+                    ));
+                } else {
+                    s_tmp.push_str(&format!("{}{}\n", blanks_fix(blanks0+blanks1+max_len), line));
+                }
+            }
+                cammands.push_str(&s_tmp);
             })
             .count();
         cammands
