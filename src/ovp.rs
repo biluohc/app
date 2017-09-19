@@ -90,7 +90,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut bool {
         None
     }
     fn parse(&mut self, _: &str, _: &str, _: &mut usize, _: &mut OptTypo) -> Result<(), String> {
-        **self = true;
+        **self = ! **self;
         Ok(())
     }
     fn check(&self, _: &str, _: &bool, _: &usize, _: &OptTypo) -> Result<(), String> {
