@@ -111,6 +111,8 @@ pub struct Helper {
     //  current_cmd
     current_cmd: Option<String>, //main is None
     current_cmd_sort_key: Option<String>,
+    // args_len
+    args_len:usize,
     helps: Helps,
 }
 
@@ -158,6 +160,9 @@ impl Helper {
     }
     pub fn temp_dir(&self) -> &String {
         &self.temp_dir
+    }
+    pub fn args_len(&self)->&usize {
+        &self.args_len
     }
     pub fn as_helps(&self) -> &Helps {
         &self.helps

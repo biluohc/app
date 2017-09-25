@@ -268,6 +268,7 @@ impl<'app> App<'app> {
     pub fn parse_strings(&mut self, args: &[String]) -> Result<(), AppError> {
         dbln!("parse_strings(): {:?}", args);
         self._build_helper();
+        self.helper.args_len= args.len();
         self.helper.current_exe = env::current_exe()
             .map(|s| s.to_string_lossy().into_owned())
             .ok();
