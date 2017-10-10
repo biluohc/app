@@ -28,7 +28,6 @@ impl Config {
                 .author("Wspsxing", "biluohc@qq.com")
                 .addr("Repo", "https://github.com/biluohc/zipcs")
                 .desc("Useful tools collection.")
-                .allow_zero_args(false)
                 .cmd(
                     Cmd::new("zip")
                         .short("z")
@@ -100,6 +99,12 @@ impl Config {
                 )
                 .parse_args()
         };
+
+        if *helper.args_len() == 0 
+        {
+            helper.help_exit(0);
+        }
+        
         if list {
             config.zip.task = Task::LIST;
         }
