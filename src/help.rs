@@ -161,6 +161,21 @@ impl Helper {
     pub fn temp_dir(&self) -> &String {
         &self.temp_dir
     }
+    /**
+    You can do something if the length of arguments satisfys a condition.
+    
+    Example: Print the help message when args.len() is 0.
+
+    ```none
+    let helper= {
+        ...
+    };
+    if helper.args_len() == 0 
+    {
+        helper.help_exit(0);
+    }
+    ```
+    */
     pub fn args_len(&self)->&usize {
         &self.args_len
     }
