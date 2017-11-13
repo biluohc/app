@@ -402,7 +402,7 @@ sudo ln -s $HOME/.cargo/bin/cargo-xxx  /usr/bin/xxx
 ```
 */
 impl<'app> App<'app> {
-    /// This function is only verified on Linux64 currently.
+    /// This function is only verified on Linux/Windows(cargo-V0.23.0) currently.
     pub fn as_cargo_subcmd() -> bool {
         let cargo_home_bin = env::var("CARGO_HOME").map(PathBuf::from).map(|mut p| {
             p.push("bin");
