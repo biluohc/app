@@ -90,7 +90,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut bool {
         None
     }
     fn parse(&mut self, _: &str, _: &str, _: &mut usize, _: &mut OptTypo) -> Result<(), String> {
-        **self = ! **self;
+        **self = !**self;
         Ok(())
     }
     fn check(&self, _: &str, _: &bool, _: &usize, _: &OptTypo) -> Result<(), String> {
@@ -117,8 +117,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut String {
         } else if typo.is_single() {
             Err(format!(
                 "OPTION(<{}>) can only occurs once, but second: {:?}",
-                opt_name,
-                msg
+                opt_name, msg
             ))?;
         }
         Ok(())
@@ -152,8 +151,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut char {
                     if *count > 1 {
                         Err(format!(
                             "OPTION(<{}>) can only occurs once, but second: {:?}",
-                            opt_name,
-                            msg
+                            opt_name, msg
                         ))?;
                     }
                 }
@@ -162,10 +160,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut char {
                         **self = c;
                     }
                 }
-                OptTypo::Covered |
-                OptTypo::Multiple(..) => {
+                OptTypo::Covered | OptTypo::Multiple(..) => {
                     **self = c;
-                }     
+                }
             }
         }
         Ok(())
@@ -236,8 +233,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<char> {
                     if *count > 1 {
                         Err(format!(
                             "OPTION(<{}>) can only occurs once, but second: {:?}",
-                            opt_name,
-                            msg
+                            opt_name, msg
                         ))?;
                     }
                 }
@@ -246,10 +242,9 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<char> {
                         **self = Some(c);
                     }
                 }
-                OptTypo::Covered |
-                OptTypo::Multiple(..) => {
+                OptTypo::Covered | OptTypo::Multiple(..) => {
                     **self = Some(c);
-                }     
+                }
             }
         }
         Ok(())
@@ -278,8 +273,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Option<String> {
         } else if typo.is_single() {
             Err(format!(
                 "OPTION(<{}>) can only occurs once, but second: {:?}",
-                opt_name,
-                msg
+                opt_name, msg
             ))?;
         }
         Ok(())
@@ -360,10 +354,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<char> {
                 if count as &usize > len {
                     Err(format!(
                         "OPTION(<{}>) can only occurs {} times, but the count {} beyond: {:?}",
-                        opt_name,
-                        len,
-                        count,
-                        msg
+                        opt_name, len, count, msg
                     ))?;
                 }
                 self.push(c);
@@ -381,10 +372,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<char> {
             if *count != 0 && count != len {
                 Err(format!(
                     "OPTION(<{}>) can only occurs {} times, but it occurs {} times: {:?}",
-                    len,
-                    opt_name,
-                    count,
-                    self
+                    len, opt_name, count, self
                 ))?;
             }
         }
@@ -435,10 +423,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<String> {
             if count as &usize > len {
                 Err(format!(
                     "OPTION(<{}>) can only occurs {} times, but the count {} beyond: {:?}",
-                    opt_name,
-                    len,
-                    count,
-                    msg
+                    opt_name, len, count, msg
                 ))?;
             }
         }
@@ -453,10 +438,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut Vec<String> {
             if *count != 0 && count != len {
                 Err(format!(
                     "OPTION(<{}>) can only occurs {} times, but it occurs {} times: {:?}",
-                    len,
-                    opt_name,
-                    count,
-                    self
+                    len, opt_name, count, self
                 ))?;
             }
         }
@@ -479,7 +461,7 @@ macro_rules! add_vec_impl {
     fn parse(&mut self, opt_name: &str, msg: &str, count: &mut usize, typo: &mut OptTypo) -> Result<(), String> {
         if *count == 1 {
             self.clear(); // clear default's value
-        }       
+        }
         if !typo.is_multiple() {
             typo.set_multiple(None);
         }
@@ -540,12 +522,10 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut [char] {
         if !typo.is_multiple() {
             typo.set_multiple(Some(self.len()));
         }
-        let len = typo.multiple_get().expect(
-            &format!("OPTION(<{}>)'s value: can't set as None of the length of slice \"{:?}\"",
-            opt_name,
-            self,
-        ),
-        );
+        let len = typo.multiple_get().expect(&format!(
+            "OPTION(<{}>)'s value: can't set as None of the length of slice \"{:?}\"",
+            opt_name, self,
+        ));
         assert!(*count >= 1);
         for (idx, c) in msg.chars().enumerate() {
             if idx != 0 {
@@ -554,10 +534,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut [char] {
             if count as &usize > len {
                 Err(format!(
                     "OPTION(<{}>) can only occurs {} times, but the count {} beyond: {:?}",
-                    opt_name,
-                    len,
-                    count,
-                    msg
+                    opt_name, len, count, msg
                 ))?;
             }
             self[*count - 1] = c;
@@ -572,10 +549,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut [char] {
             if *count != 0 && count != len {
                 Err(format!(
                     "OPTION(<{}>) can only occurs {} times, but it occurs {} times: {:?}",
-                    len,
-                    opt_name,
-                    count,
-                    self
+                    len, opt_name, count, self
                 ))?;
             }
         }
@@ -597,20 +571,15 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut [String] {
         if !typo.is_multiple() {
             typo.set_multiple(Some(self.len()));
         }
-        let len = typo.multiple_get().expect(
-            &format!("OPTION(<{}>)'s value: can't set as None of the length of slice \"{:?}\"",
-            opt_name,
-            self,
-        ),
-        );
+        let len = typo.multiple_get().expect(&format!(
+            "OPTION(<{}>)'s value: can't set as None of the length of slice \"{:?}\"",
+            opt_name, self,
+        ));
         assert!(*count >= 1);
         if count as &usize > len {
             Err(format!(
                 "OPTION(<{}>) can only occurs {} times, but the count {} beyond: {:?}",
-                opt_name,
-                len,
-                count,
-                msg
+                opt_name, len, count, msg
             ))?;
         }
         self[*count - 1] = msg.to_owned();
@@ -624,10 +593,7 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut [String] {
             if *count != 0 && count != len {
                 Err(format!(
                     "OPTION(<{}>) can only occurs {} times, but it occurs {} times: {:?}",
-                    len,
-                    opt_name,
-                    count,
-                    self
+                    len, opt_name, count, self
                 ))?;
             }
         }
@@ -656,7 +622,7 @@ macro_rules! add_slice_impl {
             opt_name,
             self,
         ));
-        assert!(*count >= 1);        
+        assert!(*count >= 1);
             if count as &usize > len {
                 Err(format!(
                     "OPTION(<{}>) can only occurs {} times, but the count {} beyond: {:?}",
@@ -697,8 +663,6 @@ macro_rules! add_slice_impl {
 add_slice_impl! { bool usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64 }
 add_slice_impl! { IpAddr Ipv4Addr Ipv6Addr SocketAddr SocketAddrV4 SocketAddrV6 }
 
-
-
 // cargo t -- --nocapture  ovp::tests::chars
 #[cfg(test)]
 mod tests {
@@ -709,51 +673,51 @@ mod tests {
     }
     fn opt_() {
         let mut cs: Vec<char> = Vec::new();
-       "None".chars().map(|c|cs.push(c)).count();
-    {
-        let mut opt = Opt::new("char", &mut cs);
-        assert!(opt.parse("charse").is_ok());
-        assert_eq!(*opt.count_get(), "charse".len());
-    }
-    assert_eq!(cs, vec!['c', 'h', 'a', 'r', 's', 'e']);
+        "None".chars().map(|c| cs.push(c)).count();
+        {
+            let mut opt = Opt::new("char", &mut cs);
+            assert!(opt.parse("charse").is_ok());
+            assert_eq!(*opt.count_get(), "charse".len());
+        }
+        assert_eq!(cs, vec!['c', 'h', 'a', 'r', 's', 'e']);
 
-    {
-        let mut opt = Opt::new("char", &mut cs[..]);
-        assert!(opt.parse("abcshx").is_ok());
-        assert_eq!(*opt.count_get(), "abcshx".len());
-    }
-    assert_eq!(cs, vec!['a', 'b', 'c', 's', 'h', 'x']);
+        {
+            let mut opt = Opt::new("char", &mut cs[..]);
+            assert!(opt.parse("abcshx").is_ok());
+            assert_eq!(*opt.count_get(), "abcshx".len());
+        }
+        assert_eq!(cs, vec!['a', 'b', 'c', 's', 'h', 'x']);
 
-    {
-        let mut opt = Opt::new("char", &mut cs[..]);
-        assert!(opt.parse("a fg").is_ok());
-        assert_eq!(*opt.count_get(), 4);
-        assert!(opt.parse("78").is_ok());
-        assert_eq!(*opt.count_get(), 6);
-    }
-    assert_eq!(cs, vec!['a', ' ', 'f', 'g', '7', '8']);
+        {
+            let mut opt = Opt::new("char", &mut cs[..]);
+            assert!(opt.parse("a fg").is_ok());
+            assert_eq!(*opt.count_get(), 4);
+            assert!(opt.parse("78").is_ok());
+            assert_eq!(*opt.count_get(), 6);
+        }
+        assert_eq!(cs, vec!['a', ' ', 'f', 'g', '7', '8']);
 
-    let mut cs = [' '; 5];
-    {
-        let mut opt = Opt::new("char", &mut cs[..]);
-        assert!(opt.parse("a fg").is_ok());
-        assert_eq!(*opt.count_get(), 4);
-        assert!(opt.parse("7").is_ok());
-        assert_eq!(*opt.count_get(), 5);
-    }
-    assert_eq!(cs, ['a', ' ', 'f', 'g', '7']);
+        let mut cs = [' '; 5];
+        {
+            let mut opt = Opt::new("char", &mut cs[..]);
+            assert!(opt.parse("a fg").is_ok());
+            assert_eq!(*opt.count_get(), 4);
+            assert!(opt.parse("7").is_ok());
+            assert_eq!(*opt.count_get(), 5);
+        }
+        assert_eq!(cs, ['a', ' ', 'f', 'g', '7']);
 
-    let mut cs = [' '; 5];
-    {
-        let mut opt = Opt::new("char", &mut cs[..]).typo(OptTypo::Multiple(Some(3)));
-        assert!(opt.parse("af").is_ok());
-        assert_eq!(*opt.count_get(), 2);
-        assert!(opt.parse("6").is_ok());
-        assert_eq!(*opt.count_get(), 3);
-        assert!(opt.parse("6").is_err());
-        assert_eq!(*opt.count_get(), 4);
-        assert!(opt.parse("xcmh").is_err());
-        assert_eq!(*opt.count_get(), 5);
-    }
+        let mut cs = [' '; 5];
+        {
+            let mut opt = Opt::new("char", &mut cs[..]).typo(OptTypo::Multiple(Some(3)));
+            assert!(opt.parse("af").is_ok());
+            assert_eq!(*opt.count_get(), 2);
+            assert!(opt.parse("6").is_ok());
+            assert_eq!(*opt.count_get(), 3);
+            assert!(opt.parse("6").is_err());
+            assert_eq!(*opt.count_get(), 4);
+            assert!(opt.parse("xcmh").is_err());
+            assert_eq!(*opt.count_get(), 5);
+        }
     }
 }

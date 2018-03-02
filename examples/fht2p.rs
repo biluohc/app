@@ -1,5 +1,5 @@
 extern crate app;
-use app::{App, Opt, Args};
+use app::{App, Args, Opt};
 
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
@@ -23,9 +23,12 @@ impl Config {
                 .author("Wspsxing", "biluohc@qq.com")
                 .addr("Github", "https://github.com/biluohc/fht2p")
                 .desc("A HTTP Server for Static File written with Rust.")
-                .opt(Opt::new("cp", &mut cp).short('c').long("cp").help(
-                    "Print the default config file",
-                ))
+                .opt(
+                    Opt::new("cp", &mut cp)
+                        .short('c')
+                        .long("cp")
+                        .help("Print the default config file"),
+                )
                 .opt(
                     Opt::new("config", &mut c_path)
                         .optional()
@@ -51,9 +54,7 @@ impl Config {
                         .long("port")
                         .help("Sets listenning port"),
                 )
-                .args(Args::new("PATH", &mut config.paths).help(
-                    "Sets the path to share",
-                ))
+                .args(Args::new("PATH", &mut config.paths).help("Sets the path to share"))
                 .parse_args()
         };
         if cp {
@@ -69,7 +70,6 @@ impl Config {
             .check()
             .map_err(|e| helper.help_err_exit(e, 1))
             .unwrap() // map_err alrendy exit if it is err, so unwrap is safe.
-
     }
     fn check(self) -> Result<Self, String> {
         for path in &self.paths {

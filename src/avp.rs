@@ -89,10 +89,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<String> {
             if count as &usize > len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    msg
+                    args_name, len, count, msg
                 ))?;
             }
         }
@@ -107,10 +104,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<String> {
             if *count != 0 && count != len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    self
+                    args_name, len, count, self
                 ))?;
             }
         }
@@ -136,10 +130,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<PathBuf> {
             if count as &usize > len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    msg
+                    args_name, len, count, msg
                 ))?;
             }
         }
@@ -154,10 +145,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<PathBuf> {
             if *count != 0 && count != len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    self
+                    args_name, len, count, self
                 ))?;
             }
         }
@@ -188,10 +176,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<char> {
                 if count as &usize > len {
                     Err(format!(
                         "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                        args_name,
-                        len,
-                        count,
-                        msg
+                        args_name, len, count, msg
                     ))?;
                 }
                 self.push(c);
@@ -209,10 +194,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut Vec<char> {
             if *count != 0 && count != len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    self
+                    args_name, len, count, self
                 ))?;
             }
         }
@@ -298,10 +280,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [String] {
             if count as &usize > len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    msg
+                    args_name, len, count, msg
                 ))?;
             }
         }
@@ -316,10 +295,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [String] {
             if *count != 0 && count != len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    self
+                    args_name, len, count, self
                 ))?;
             }
         }
@@ -346,10 +322,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [PathBuf] {
             if count as &usize > len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    msg
+                    args_name, len, count, msg
                 ))?;
             }
         }
@@ -364,10 +337,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [PathBuf] {
             if *count != 0 && count != len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    self
+                    args_name, len, count, self
                 ))?;
             }
         }
@@ -398,10 +368,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [char] {
                 if count as &usize > len {
                     Err(format!(
                         "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                        args_name,
-                        len,
-                        count,
-                        msg
+                        args_name, len, count, msg
                     ))?;
                 }
                 self[*count - 1] = c;
@@ -417,10 +384,7 @@ impl<'app, 's: 'app> ArgsValueParse<'app> for &'s mut [char] {
             if *count != 0 && count != len {
                 Err(format!(
                     "ARGS(<{}>) only needs {}, but the count {} beyond: {:?}",
-                    args_name,
-                    len,
-                    count,
-                    self
+                    args_name, len, count, self
                 ))?;
             }
         }
@@ -496,51 +460,51 @@ mod tests {
     }
     fn opt_() {
         let mut cs: Vec<char> = Vec::new();
-       "None".chars().map(|c|cs.push(c)).count();
-    {
-        let mut opt = Opt::new("char", &mut cs);
-        assert!(opt.parse(&["charse".to_string()]).is_ok());
-        assert_eq!(*opt.count_get(), "charse".len());
-    }
-    assert_eq!(cs, vec!['c', 'h', 'a', 'r', 's', 'e']);
+        "None".chars().map(|c| cs.push(c)).count();
+        {
+            let mut opt = Opt::new("char", &mut cs);
+            assert!(opt.parse(&["charse".to_string()]).is_ok());
+            assert_eq!(*opt.count_get(), "charse".len());
+        }
+        assert_eq!(cs, vec!['c', 'h', 'a', 'r', 's', 'e']);
 
-    {
-        let mut opt = Opt::new("char", &mut cs[..]);
-        assert!(opt.parse(&["abcshx".to_string()]).is_ok());
-        assert_eq!(*opt.count_get(), "abcshx".len());
-    }
-    assert_eq!(cs, vec!['a', 'b', 'c', 's', 'h', 'x']);
+        {
+            let mut opt = Opt::new("char", &mut cs[..]);
+            assert!(opt.parse(&["abcshx".to_string()]).is_ok());
+            assert_eq!(*opt.count_get(), "abcshx".len());
+        }
+        assert_eq!(cs, vec!['a', 'b', 'c', 's', 'h', 'x']);
 
-    {
-        let mut opt = Opt::new("char", &mut cs[..]);
-        assert!(opt.parse(&["a fg".to_string()]).is_ok());
-        assert_eq!(*opt.count_get(), 4);
-        assert!(opt.parse(&["78".to_string()]).is_ok());
-        assert_eq!(*opt.count_get(), 6);
-    }
-    assert_eq!(cs, vec!['a', ' ', 'f', 'g', '7', '8']);
+        {
+            let mut opt = Opt::new("char", &mut cs[..]);
+            assert!(opt.parse(&["a fg".to_string()]).is_ok());
+            assert_eq!(*opt.count_get(), 4);
+            assert!(opt.parse(&["78".to_string()]).is_ok());
+            assert_eq!(*opt.count_get(), 6);
+        }
+        assert_eq!(cs, vec!['a', ' ', 'f', 'g', '7', '8']);
 
-    let mut cs = [' '; 5];
-    {
-        let mut opt = Opt::new("char", &mut cs[..]);
-        assert!(opt.parse(&["a fg".to_string()]).is_ok());
-        assert_eq!(*opt.count_get(), 4);
-        assert!(opt.parse(&["7".to_string()]).is_ok());
-        assert_eq!(*opt.count_get(), 5);
-    }
-    assert_eq!(cs, ['a', ' ', 'f', 'g', '7']);
+        let mut cs = [' '; 5];
+        {
+            let mut opt = Opt::new("char", &mut cs[..]);
+            assert!(opt.parse(&["a fg".to_string()]).is_ok());
+            assert_eq!(*opt.count_get(), 4);
+            assert!(opt.parse(&["7".to_string()]).is_ok());
+            assert_eq!(*opt.count_get(), 5);
+        }
+        assert_eq!(cs, ['a', ' ', 'f', 'g', '7']);
 
-    let mut cs = [' '; 5];
-    {
-        let mut opt = Opt::new("char", &mut cs[..]).len(3u8);
-        assert!(opt.parse(&["af".to_string()]).is_ok());
-        assert_eq!(*opt.count_get(), 2);
-        assert!(opt.parse(&["6".to_string()]).is_ok());
-        assert_eq!(*opt.count_get(), 3);
-        assert!(opt.parse(&["6".to_string()]).is_err());
-        assert_eq!(*opt.count_get(), 4);
-        assert!(opt.parse(&["xcmh".to_string()]).is_err());
-        assert_eq!(*opt.count_get(), 5);
-    }
+        let mut cs = [' '; 5];
+        {
+            let mut opt = Opt::new("char", &mut cs[..]).len(3u8);
+            assert!(opt.parse(&["af".to_string()]).is_ok());
+            assert_eq!(*opt.count_get(), 2);
+            assert!(opt.parse(&["6".to_string()]).is_ok());
+            assert_eq!(*opt.count_get(), 3);
+            assert!(opt.parse(&["6".to_string()]).is_err());
+            assert_eq!(*opt.count_get(), 4);
+            assert!(opt.parse(&["xcmh".to_string()]).is_err());
+            assert_eq!(*opt.count_get(), 5);
+        }
     }
 }

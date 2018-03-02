@@ -1,8 +1,8 @@
 #![allow(dead_code)]
+extern crate app;
 #[macro_use]
 extern crate stderr;
-extern crate app;
-use app::{App, Opt, Args, Cmd, OptValue, OptValueParse, OptTypo, AppError};
+use app::{App, AppError, Args, Cmd, Opt, OptTypo, OptValue, OptValueParse};
 
 trait IsParse {
     fn is_parse(&self) -> bool;
@@ -134,9 +134,7 @@ fn fun(msg: &str, rest: Result<(), AppError>, value: Fht2p) {
                     .optional()
                     .help("Sets user information"),
             )
-            .args(Args::new("PATHS", &mut fht2p.dirs).help(
-                r#"Sets the path to share"#,
-            ))
+            .args(Args::new("PATHS", &mut fht2p.dirs).help(r#"Sets the path to share"#))
             .cmd(
                 Cmd::new("run")
                     .short("r")
@@ -164,9 +162,7 @@ fn fun(msg: &str, rest: Result<(), AppError>, value: Fht2p) {
                             .long("release")
                             .help("Build artifacts in release mode, with optimizations"),
                     )
-                    .args(Args::new("File", &mut fht2p.build.files).help(
-                        "File to build",
-                    )),
+                    .args(Args::new("File", &mut fht2p.build.files).help("File to build")),
             )
             .parse_strings(&args[..])
     };
@@ -176,10 +172,10 @@ fn fun(msg: &str, rest: Result<(), AppError>, value: Fht2p) {
     dbln!("fht2p_parse: {:?}", fht2p);
     dbln!();
     if rest.is_ok() && rest_parse.is_ok() {
-        assert_eq!(value , fht2p);
+        assert_eq!(value, fht2p);
     } else if rest.is_parse() {
     } else {
-        assert_eq!(rest ,rest_parse);
+        assert_eq!(rest, rest_parse);
     }
 }
 
@@ -272,23 +268,21 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut User {
             self.name.clear();
             self.address.clear();
             let vs: Vec<&str> = msg.split(',').filter(|s| !s.is_empty()).collect();
-            if vs.len() != 3 ||vs[0].trim().is_empty() {
+            if vs.len() != 3 || vs[0].trim().is_empty() {
                 return Err(format!(
                     "OPTION(<{}>) parse<User> fails: \"{}\"",
-                    opt_name,
-                    msg
+                    opt_name, msg
                 ));
             }
             self.name.push_str(vs[0]);
-            self.age = vs[1].parse::<u8>().map_err(|_| {
-                format!("OPTION(<{}>) parse<User.age> fails: \"{}\"", opt_name, msg)
-            })?;
+            self.age = vs[1]
+                .parse::<u8>()
+                .map_err(|_| format!("OPTION(<{}>) parse<User.age> fails: \"{}\"", opt_name, msg))?;
             self.address.push_str(vs[2]);
         } else if typo.is_single() {
             Err(format!(
                 "OPTION(<{}>) can only occurs once, but second: {:?}",
-                opt_name,
-                msg
+                opt_name, msg
             ))?;
         }
         Ok(())

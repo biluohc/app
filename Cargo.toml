@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.6.3"
+version = "0.6.4"
 authors = ["biluohc <biluohc@qq.com>"]
 description = "A easy-to-use command-line-parser."
 
@@ -16,7 +16,7 @@ travis-ci = { repository = "biluohc/app" }
 
 [dependencies]
 quick-error = "^1.2.0"
-term = "^0.2" # color
+term = "*" # 0.5
 stderr ="0.8.0"
 # stderr = {path = "../stderr"}
 # stderr = { git = "https://github.com/biluohc/stderr", branch = "master", version = "0.8.0"}

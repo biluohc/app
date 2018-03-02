@@ -1,5 +1,5 @@
 extern crate app;
-use app::{App, Opt, Args};
+use app::{App, Args, Opt};
 
 #[derive(Debug, Default)]
 struct Http {
@@ -32,16 +32,12 @@ fn main() {
                     .long("port")
                     .help("Sets listenning port"),
             )
-            .args(Args::new("PATH", &mut http.paths).help(
-                "Sets the path to share",
-            ))
+            .args(Args::new("PATH", &mut http.paths).help("Sets the path to share"))
             .build_helper();
         app.as_mut_helps()
             .cmd_usages
             .get_mut(&None)
-            .map(|s| {
-                *s = "USAGE: \n   http [options] [<PATH>...]\n   http -p <port> [<PATH>...]\n   http --port <port> [<PATH>...]".to_owned()
-            })
+            .map(|s| *s = "USAGE: \n   http [options] [<PATH>...]\n   http -p <port> [<PATH>...]\n   http --port <port> [<PATH>...]".to_owned())
             .unwrap();
         if App::as_cargo_subcmd() {
             app.fix_helps_for_cargo();

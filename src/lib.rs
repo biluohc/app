@@ -8,13 +8,13 @@ Cargo.toml
 
 ```toml
     [dependencies]  
-    app = "0.6.3" 
+    app = "0.6.4" 
 ```
 ## Or 
 
 ```toml
     [dependencies]  
-    app = { git = "https://github.com/biluohc/app",branch = "master", version = "0.6.3" }
+    app = { git = "https://github.com/biluohc/app",branch = "master", version = "0.6.4" }
 ```
 
 ## Documentation  
@@ -68,10 +68,12 @@ Or
 */
 
 #[macro_use]
+extern crate quick_error;
+#[macro_use]
 extern crate stderr;
 extern crate term;
-#[macro_use]
-extern crate quick_error;
+use term::color::Color;
+
 include!("help.rs");
 include!("render.rs");
 include!("elesref.rs");
@@ -99,7 +101,7 @@ static mut VERSION: bool = false;
 #[derive(Debug, Default)]
 pub struct App<'app> {
     // None is main
-    cmds: Map<Option<String>, Cmd<'app>>, // key, Cmd
+    cmds: Map<Option<String>, Cmd<'app>>,    // key, Cmd
     str_to_key: Map<String, Option<String>>, // cmd/cmd_short, key
     helper: Helper,
 }
@@ -191,8 +193,8 @@ impl<'app> App<'app> {
         {
             panic!("Cmd: \"{:?}\" already defined", name.as_ref().unwrap());
         }
-        if short.is_some() &&
-            self.str_to_key
+        if short.is_some()
+            && self.str_to_key
                 .insert(short.clone().unwrap(), key.clone())
                 .is_some()
         {
@@ -244,11 +246,8 @@ impl<'app> App<'app> {
                         s.trim(),
                         "App::parse_strings()->Err(AppError::Parse(String::new()))"
                     );
-                    self.helper.help_cmd_err_exit(
-                        self.helper.current_cmd_ref(),
-                        s,
-                        1,
-                    );
+                    self.helper
+                        .help_cmd_err_exit(self.helper.current_cmd_ref(), s, 1);
                 }
                 AppError::Help(s) => {
                     assert_ne!(
@@ -268,7 +267,7 @@ impl<'app> App<'app> {
     pub fn parse_strings(&mut self, args: &[String]) -> Result<(), AppError> {
         dbln!("parse_strings(): {:?}", args);
         self._build_helper();
-        self.helper.args_len= args.len();
+        self.helper.args_len = args.len();
         self.helper.current_exe = env::current_exe()
             .map(|s| s.to_string_lossy().into_owned())
             .ok();
@@ -324,19 +323,19 @@ impl<'app> App<'app> {
         }
         let app_has_subcmds = self.cmds.len() > 1;
         if idx != std::usize::MAX {
-            self.cmds.get_mut(&None).unwrap().parse(
-                &args[0..idx],
-                &app_has_subcmds,
-            )?;
+            self.cmds
+                .get_mut(&None)
+                .unwrap()
+                .parse(&args[0..idx], &app_has_subcmds)?;
             self.cmds
                 .get_mut(&self.helper.current_cmd_sort_key)
                 .unwrap()
                 .parse(&args[idx + 1..], &app_has_subcmds)?;
         } else {
-            self.cmds.get_mut(&None).unwrap().parse(
-                &args[..],
-                &app_has_subcmds,
-            )?;
+            self.cmds
+                .get_mut(&None)
+                .unwrap()
+                .parse(&args[..], &app_has_subcmds)?;
         }
         // check main
         self.check(&None)?;
@@ -371,7 +370,6 @@ impl<'app> App<'app> {
         self.helper
     }
 }
-
 
 /** 
 ## About Cargo
@@ -470,7 +468,7 @@ pub struct Cmd<'app> {
     short: Option<&'app str>,
     sort_key: Option<&'app str>,
     desc: &'app str,
-    opts: Map<String, Opt<'app>>, // key to Opt
+    opts: Map<String, Opt<'app>>,    // key to Opt
     str_to_key: Map<String, String>, //-short/--long to key
     args: Vec<Args<'app>>,
     allow_zero_args: bool,
@@ -495,7 +493,6 @@ impl<'app> Cmd<'app> {
                 .long("version")
                 .help("Show the version message"),
         )
-
     }
     /// name and add `-h/--help`
     pub fn new<'s: 'app>(name: &'s str) -> Self {
@@ -533,9 +530,7 @@ impl<'app> Cmd<'app> {
         if long.is_none() && short.is_none() {
             panic!(
                 "OPTION: \"{}\" don't have --{} and -{} all",
-                name,
-                name,
-                name
+                name, name, name
             );
         }
         if let Some(ref s) = long {
@@ -869,21 +864,15 @@ impl<'app> Opt<'app> {
     #[doc(hidden)]
     pub fn parse(&mut self, msg: &str) -> Result<(), String> {
         self.count_add_one();
-        self.value.as_mut().parse(
-            self.name,
-            msg,
-            &mut self.count,
-            &mut self.typo,
-        )
+        self.value
+            .as_mut()
+            .parse(self.name, msg, &mut self.count, &mut self.typo)
     }
     #[doc(hidden)]
     pub fn check(&self) -> Result<(), String> {
-        self.value.as_ref().check(
-            self.name,
-            &self.optional,
-            &self.count,
-            &self.typo,
-        )
+        self.value
+            .as_ref()
+            .check(self.name, &self.optional, &self.count, &self.typo)
     }
 }
 
@@ -942,7 +931,6 @@ impl<'app> Opt<'app> {
     }
 }
 
-
 /// **Args**
 #[derive(Debug)]
 pub struct Args<'app> {
@@ -989,23 +977,17 @@ impl<'app> Args<'app> {
     fn parse(&mut self, msg: &[String]) -> Result<(), String> {
         for arg in msg {
             self.count_add_one();
-            self.value.as_mut().parse(
-                self.name,
-                arg,
-                &mut self.count,
-                &mut self.len,
-            )?;
+            self.value
+                .as_mut()
+                .parse(self.name, arg, &mut self.count, &mut self.len)?;
         }
         Ok(())
     }
     #[doc(hidden)]
     fn check(&self) -> Result<(), String> {
-        self.value.as_ref().check(
-            self.name,
-            &self.optional,
-            &self.count,
-            self.len.as_ref(),
-        )
+        self.value
+            .as_ref()
+            .check(self.name, &self.optional, &self.count, self.len.as_ref())
     }
 }
 

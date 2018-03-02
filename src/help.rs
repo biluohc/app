@@ -52,9 +52,10 @@ impl Helps {
         let info = &self.cmd_infos[cmd_name];
         let usages = &self.cmd_usages[cmd_name];
         let options = &self.cmd_options[cmd_name];
-        let args = self.cmd_args.get(cmd_name).map(|s| s.as_str()).unwrap_or(
-            "",
-        );
+        let args = self.cmd_args
+            .get(cmd_name)
+            .map(|s| s.as_str())
+            .unwrap_or("");
         let main_sub_cmds = if cmd_name.is_some() {
             ""
         } else {
@@ -101,7 +102,7 @@ pub struct Helper {
     name: String,
     version: String,
     authors: Vec<(String, String)>, // (name,email)
-    addrs: Vec<(String, String)>, // (addr_name,addr)
+    addrs: Vec<(String, String)>,   // (addr_name,addr)
     desc: String,
     // env_vars
     current_exe: Option<String>,
@@ -112,7 +113,7 @@ pub struct Helper {
     current_cmd: Option<String>, //main is None
     current_cmd_sort_key: Option<String>,
     // args_len
-    args_len:usize,
+    args_len: usize,
     helps: Helps,
 }
 
@@ -176,7 +177,7 @@ impl Helper {
     }
     ```
     */
-    pub fn args_len(&self)->&usize {
+    pub fn args_len(&self) -> &usize {
         &self.args_len
     }
     pub fn as_helps(&self) -> &Helps {
@@ -218,13 +219,25 @@ impl Helper {
     }
     /// print error message line(2) with Red color(fg)
     #[inline]
-    pub fn err_line_print(&self, msg: &str, line_color: u16) {
+    pub fn err_line_print(&self, msg: &str, line_color: Color) {
         for (i, line) in msg.trim().lines().enumerate() {
             if i == 1 {
-                let mut t = term::stderr().unwrap();
-                t.fg(line_color).unwrap();
-                write!(t, "{}", line).unwrap();
-                t.reset().unwrap();
+                match term::stderr() {
+                    Some(mut t) => match t.bg(line_color) {
+                        Ok(_ok) => {
+                            write!(t, "{}", line)
+                                .ok()
+                                .unwrap_or_else(|| err!("{}", line));
+                            t.reset().ok();
+                        }
+                        Err(_e) => {
+                            err!("{}", line);
+                        }
+                    },
+                    None => {
+                        err!("{}", line);
+                    }
+                }
             } else {
                 errln!("{}", line);
             }

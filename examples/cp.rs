@@ -1,5 +1,5 @@
 extern crate app;
-use app::{App, Opt, Args};
+use app::{App, Args, Opt};
 
 use std::path::PathBuf;
 
@@ -28,24 +28,20 @@ impl Config {
                     Opt::new("force", &mut config.force)
                         .short('f')
                         .long("force")
-                        .help(
-                            "if an existing destination file cannot be opened, remove it and try again",
-                        ),
+                        .help("if an existing destination file cannot be opened, remove it and try again"),
                 )
                 .opt(
                     Opt::new("recursive", &mut config.recursive)
                         .short('r')
                         .long("recursive")
-                        .help(
-                            "Recursively copy all content within a directory and its subdirectories",
-                        ),
+                        .help("Recursively copy all content within a directory and its subdirectories"),
                 )
-                .args(Args::new("SOURCE", &mut config.source).help(
-                    "CP the SOURCE(s) to DEST",
-                ))
-                .args(Args::new("DEST", &mut config.dest).len(1usize).help(
-                    "DEST Path",
-                ))
+                .args(Args::new("SOURCE", &mut config.source).help("CP the SOURCE(s) to DEST"))
+                .args(
+                    Args::new("DEST", &mut config.dest)
+                        .len(1usize)
+                        .help("DEST Path"),
+                )
                 .parse_args()
         };
         config

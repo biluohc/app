@@ -2,7 +2,7 @@
 pub use term::color;
 
 pub static mut ERROR_LINE_COLOR: color::Color = color::RED; // for print error with color(Red)
-pub fn error_line_color_get() -> u16 {
+pub fn error_line_color_get() -> color::Color {
     unsafe { ERROR_LINE_COLOR }
 }
 pub fn error_line_color_set(num: color::Color) {

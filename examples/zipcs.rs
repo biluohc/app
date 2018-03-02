@@ -1,6 +1,6 @@
 extern crate app;
 
-use app::{App, Cmd, Opt, Args, OptValue, OptValueParse, OptTypo};
+use app::{App, Args, Cmd, Opt, OptTypo, OptValue, OptValueParse};
 
 fn main() {
     Config::parse()
@@ -33,9 +33,12 @@ impl Config {
                         .short("z")
                         .sort_key("a0")
                         .desc("Unzip with charset setting.")
-                        .opt(Opt::new("list", &mut list).short('l').long("list").help(
-                            "Only list files from ZipArchives",
-                        ))
+                        .opt(
+                            Opt::new("list", &mut list)
+                                .short('l')
+                                .long("list")
+                                .help("Only list files from ZipArchives"),
+                        )
                         .opt(
                             Opt::new("charset", &mut config.zip.charset)
                                 .short('c')
@@ -48,9 +51,7 @@ impl Config {
                                 .long("outdir")
                                 .help("Sets Output directory"),
                         )
-                        .args(Args::new("ZipArchive", &mut config.zip.zips).help(
-                            "ZipArchive need to unzip",
-                        )),
+                        .args(Args::new("ZipArchive", &mut config.zip.zips).help("ZipArchive need to unzip")),
                 )
                 .cmd(
                     Cmd::new("ping")
@@ -63,18 +64,18 @@ impl Config {
                                 .long("count")
                                 .help("stop after sending count ECHO_REQUEST packets"),
                         )
-                        .opt(Opt::new("_6", &mut config.ping._6).short('6').help(
-                            "use IPV6",
-                        ))
+                        .opt(
+                            Opt::new("_6", &mut config.ping._6)
+                                .short('6')
+                                .help("use IPV6"),
+                        )
                         .opt(
                             Opt::new("only-line", &mut config.ping.only_line)
                                 .short('l')
                                 .long("only-line")
                                 .help("print result only-line"),
                         )
-                        .args(Args::new("Host/IP", &mut config.ping.hosts).help(
-                            "Host or IP need to ping",
-                        )),
+                        .args(Args::new("Host/IP", &mut config.ping.hosts).help("Host or IP need to ping")),
                 )
                 .cmd(
                     Cmd::new("url")
@@ -93,18 +94,15 @@ impl Config {
                                 .long("plus")
                                 .help("replaces ' ' with '+'"),
                         )
-                        .args(Args::new("Url", &mut config.url.strs).help(
-                            "Url need to decode/encode",
-                        )),
+                        .args(Args::new("Url", &mut config.url.strs).help("Url need to decode/encode")),
                 )
                 .parse_args()
         };
 
-        if *helper.args_len() == 0 
-        {
+        if *helper.args_len() == 0 {
             helper.help_exit(0);
         }
-        
+
         if list {
             config.zip.task = Task::LIST;
         }
@@ -149,23 +147,22 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut CharSet {
                 Err(_) => {
                     Err(format!(
                         "OPTION(<{}>) parse<CharSet> fails: \"{}\"",
-                        opt_name,
-                        msg
+                        opt_name, msg
                     ))?;
                 }
-                Ok(o) => **self = o,}
+                Ok(o) => **self = o,
+            }
         } else if typo.is_single() {
             Err(format!(
                 "OPTION(<{}>) can only occurs once, but second: {:?}",
-                opt_name,
-                msg
+                opt_name, msg
             ))?;
         }
         Ok(())
     }
     /// env::arg could is `""`
     fn check(&self, opt_name: &str, optional: &bool, count: &usize, _: &OptTypo) -> Result<(), String> {
-        if !optional && *count == 0 &&self.default().is_none() {
+        if !optional && *count == 0 && self.default().is_none() {
             Err(format!("OPTION(<{}>) missing", opt_name))?;
         }
         Ok(())
@@ -197,7 +194,7 @@ impl Pings {
 }
 #[derive(Debug, PartialEq)]
 pub enum Task {
-    LIST, // zipcs -l/--list
+    LIST,  // zipcs -l/--list
     UNZIP, // Extract files from archive with full paths
 }
 impl Default for Task {
@@ -208,10 +205,10 @@ impl Default for Task {
 
 #[derive(Debug, Default)]
 pub struct Zips {
-    pub charset: CharSet, //zip -cs/--charset   // utf-8
-    pub outdir: String, //zipcs -o/--outdir   //./
+    pub charset: CharSet,  //zip -cs/--charset   // utf-8
+    pub outdir: String,    //zipcs -o/--outdir   //./
     pub zips: Vec<String>, //zipcs [ZipArchive..]
-    pub task: Task, // UNZIP
+    pub task: Task,        // UNZIP
 }
 impl Zips {
     fn check(&self) -> Result<(), String> {

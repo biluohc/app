@@ -1,5 +1,5 @@
 extern crate app;
-use app::{App, Opt, Args, Cmd, OptValue, OptValueParse, OptTypo};
+use app::{App, Args, Cmd, Opt, OptTypo, OptValue, OptValueParse};
 
 // cargo t -- --nocapture
 #[test]
@@ -10,7 +10,7 @@ fn main() {
     // fun("src -p 8080 -p 8000 -p 80 examples -k tests --user Loli,16,./");
     // fun("src -p 8080 -p 8000 -p 80 examples -k tests"); // optional
     // fun("src -p 8080 -p 8000 -p 80 examples -k tests --user Loli,16,./ run --home $HOME");
-    fun( "src -p 8080 -p 8000 -p 80 examples -k tests --user Loli,16,./ build -r sec ssx");
+    fun("src -p 8080 -p 8000 -p 80 examples -k tests --user Loli,16,./ build -r sec ssx");
     // fun("src -p 8080 -p 8000 -p 80  examples -k tests --user Loli,16,./ build -r -v");
     // fun("src -p 8080 -p 8000 -p 80_  examples -k tests --user Loli,16,./ run -h");
     // fun("src -p 8080 -p 8000 -p 80_  examples -k tests --user Loli,16,./ run");
@@ -47,9 +47,7 @@ fn fun(args: &str) {
                     .long("user")
                     .help("Sets user information"),
             )
-            .args(Args::new("PATHS", &mut fht2p.dirs).help(
-                r#"Sets the path to share"#,
-            ))
+            .args(Args::new("PATHS", &mut fht2p.dirs).help(r#"Sets the path to share"#))
             .cmd(
                 Cmd::new("run")
                     .desc("run the sub_cmd")
@@ -75,9 +73,7 @@ fn fun(args: &str) {
                             .long("release")
                             .help("Build artifacts in release mode, with optimizations"),
                     )
-                    .args(Args::new("File", &mut fht2p.build.files).help(
-                        "File to build",
-                    )),
+                    .args(Args::new("File", &mut fht2p.build.files).help("File to build")),
             )
             .parse(&args[..])
     };
@@ -93,7 +89,7 @@ fn fun(args: &str) {
         }
         Some("build") => {
             println!("Command::running: {:?}", helper.current_cmd_str());
-        }   
+        }
         _ => unreachable!(),
     }
     println!("----------------------app -v/--version--------------------");
@@ -159,20 +155,18 @@ impl<'app, 's: 'app> OptValueParse<'app> for &'s mut User {
             if vs.len() != 3 || vs[0].trim().is_empty() {
                 return Err(format!(
                     "OPTION(<{}>) parse<User> fails: \"{}\"",
-                    opt_name,
-                    msg
+                    opt_name, msg
                 ));
             }
             self.name.push_str(vs[0]);
-            self.age = vs[1].parse::<u8>().map_err(|_| {
-                format!("OPTION(<{}>) parse<User.age> fails: \"{}\"", opt_name, msg)
-            })?;
+            self.age = vs[1]
+                .parse::<u8>()
+                .map_err(|_| format!("OPTION(<{}>) parse<User.age> fails: \"{}\"", opt_name, msg))?;
             self.address.push_str(vs[2]);
         } else if typo.is_single() {
             Err(format!(
                 "OPTION(<{}>) can only occurs once, but second: {:?}",
-                opt_name,
-                msg
+                opt_name, msg
             ))?;
         }
         Ok(())

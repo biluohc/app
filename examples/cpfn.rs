@@ -1,5 +1,5 @@
 extern crate app;
-use app::{app, opt, args};
+use app::{app, args, opt};
 
 use std::path::PathBuf;
 
