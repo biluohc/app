@@ -223,7 +223,7 @@ impl Helper {
         for (i, line) in msg.trim().lines().enumerate() {
             if i == 1 {
                 match term::stderr() {
-                    Some(mut t) => match t.bg(line_color) {
+                    Some(mut t) => match t.fg(line_color) {
                         Ok(_ok) => {
                             write!(t, "{}", line)
                                 .ok()
